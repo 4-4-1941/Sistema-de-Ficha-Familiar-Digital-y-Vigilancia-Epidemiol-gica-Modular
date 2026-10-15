@@ -1,47 +1,60 @@
 # Sistema de Ficha Familiar Digital y Vigilancia Epidemiológica Modular
 
-Este repositorio contiene el código fuente para el despliegue de la aplicación móvil y web de **Ficha Familiar Digital**. El sistema está diseñado para investigadores de campo y profesionales de la salud, unificando la apertura de fichas censales, la georreferenciación automatizada de viviendas, algoritmos de selección aleatoria (Kish y Cumpleaños) y la inyección dinámica de cuestionarios según el eje epidemiológico seleccionado.
+Herramienta digital diseñada para profesionales de **SERUMS** y equipos de salud pública en Perú.
 
-## 🚀 Características Principales
+## ¿Para qué sirve?
 
-*   **Apertura de Ficha Familiar:** Registro interactivo de la composición del hogar con flujos dinámicos de integrantes.
-*   **Georreferenciación en Segundo Plano:** Captura invisible de coordenadas GPS (`Latitud`, `Longitud`, `Altitud` y `Precisión`) al iniciar el guardado del formulario.
-*   **Motores de Selección Aleatoria (Ciegos):** 
-    *   *Algoritmo Tabla de Kish Automatizado:* Asignación interna de columna mediante `ID MOD 18` y ordenamiento demográfico epidemiológico (Hombres de mayor a menor, Mujeres de mayor a menor) sin intervención del encuestador.
-    *   *Capa por Fecha de Cumpleaños:* Algoritmo de contingencia basado en proximidad temporal de efemérides (Próximo/Último cumpleaños) con sub-rutina de desempate irreversible.
-*   **Inyección Dinámica de Plantillas Temáticas:** Configuración del entorno de campo mediante 6 Ejes Maestros seleccionables:
-    1. Arbovirosis y Metaxénicas (Dengue, Zika, Malaria)
-    2. Enfermedades Respiratorias y Pandemias (SARS-CoV, TBC)
-    3. Salud Ambiental y Antropogénica (Metales pesados, Contaminación de agua)
-    4. Enfermedades Inmunoprevenibles (Brechas de vacunación)
-    5. Salud Mental, Estresores y Violencia (Depresión, Ansiedad, VIF)
-    6. Enfermedades Crónicas y Metabólicas (HTA, Diabetes, ECNT)
-*   **Vectores Lógicos de Vulnerabilidad:** Clasificación automática del perfil del hogar (`Bandera_Lactantes`, `Bandera_Adulto_Mayor`, etc.) calculada al cierre de la entrevista.
-*   **Exportación Geo-Estadística:** Salida unificada compatible con sistemas SIG (QGIS, ArcGIS, Google Earth) en formatos **GeoJSON, CSV plano o KML**.
+Este sistema permite:
 
-## 🛠️ Estructura del Repositorio
+- Registrar la composición completa de los hogares (Ficha Familiar).
+- Identificar automáticamente a las personas vulnerables de cada hogar (lactantes, niños, gestantes, adultos mayores, personas con enfermedades crónicas, etc.).
+- Georreferenciar las viviendas de forma automática.
+- Facilitar la intervención de diferentes profesionales de la salud según su rol (enfermeras, médicos, psicólogos, trabajadoras sociales, etc.).
+- Responder de forma rápida ante campañas de vacunación, brotes epidémicos (ejemplo: dengue) o programas de prevención.
+
+No es solo una herramienta de investigación: es una **base de datos operativa** para la acción en salud pública.
+
+## Características principales
+
+- **Registro dinámico de la Ficha Familiar**  
+  Captura de todos los miembros del hogar con datos demográficos, parentesco, instrucción, aportes económicos y condición de residente habitual.
+
+- **Banderas automáticas de vulnerabilidad**  
+  El sistema calcula automáticamente perfiles de riesgo del hogar (ej. presencia de lactantes, adultos mayores, gestantes, personas con enfermedades crónicas, etc.).
+
+- **Geolocalización en segundo plano**  
+  Captura de coordenadas GPS (latitud, longitud, altitud y precisión) de forma invisible al guardar la ficha.
+
+- **Módulos de intervención por perfil profesional**  
+  Cada profesional (enfermera, médico, psicólogo, trabajadora social, etc.) puede desplegar los campos de acción que le corresponden.
+
+- **Motores de selección aleatoria (opcionales)**  
+  - Tabla de Kish automatizada (ciega)  
+  - Método de cumpleaños como contingencia  
+  Disponibles cuando se necesite aplicar un módulo de preguntas a una persona seleccionada al azar.
+
+- **Exportación geoespacial**  
+  Generación de archivos compatibles con sistemas de información geográfica (GeoJSON, CSV y KML).
+
+## Público objetivo
+
+- Profesionales de SERUMS
+- Enfermeras y técnicos de enfermería
+- Médicos
+- Psicólogos
+- Trabajadoras sociales
+- Equipos de vigilancia epidemiológica y atención primaria
+
+## Estructura del repositorio (en desarrollo)
 
 ```text
-├── .github/               # Flujos de integración y despliegue continuo (CI/CD)
+├── docs/                       # Documentación
 ├── src/
-│   ├── components/        # Componentes interactivos de la interfaz de usuario
-│   ├── core/
-│   │   ├── kish_matrix.py # Implementación del arreglo bidimensional de Kish
-│   │   ├── birthday_calc.py# Lógica temporal de proximidad de efemérides
-│   │   └── geo_tracker.py  # Módulo de captura y validación de metadatos GPS
-│   └── templates/         # Formularios dinámicos inyectables (Las 6 Capas)
+│   ├── core/                   # Lógica principal (Kish, banderas, GPS, etc.)
+│   ├── models/                 # Modelos de datos
+│   ├── services/               # Lógica de negocio
+│   └── ...
 ├── data/
-│   └── schemas/           # Esquemas de validación y salida de datos (JSON/GeoJSON)
-├── README.md              # Documentación general del sistema
-└── Ficha_Familiar_Universal_Epidemiologica.md # Prompt matriz de requerimientos de IA
-```
-
-## 📋 Instrucciones para el Programador de IA / Desarrollador
-
-1.  **Requerimientos del Sistema:** Toda lógica de selección individual descrita en `Ficha_Familiar_Universal_Epidemiologica.md` debe ejecutarse estrictamente *en segundo plano*. La interfaz gráfica debe permanecer limpia y ciega ante los cálculos matriciales para evitar sesgos de selección en el campo.
-2.  **Validación Geográfica:** Bloquear el cierre de la Ficha Familiar si el dispositivo reporta una `precision_gps_metros` mayor a 5 metros (configurable según la cobertura geográfica de la zona).
-3.  **Restricciones de Integridad:** Configurar el enrutamiento lógico (*skip logic*) de manera que el envío de datos finales sea rechazado si el ID del informante entrevistado no coincide con el hash del miembro seleccionado por el Motor activo (Kish o Cumpleaños).
-
-## 📄 Licencia
-
-Este proyecto está protegido bajo el Secreto Estadístico amparado por el **Decreto Supremo N° 043-2001-PCM** y normativas internacionales de protección de datos en investigaciones de salud pública.
+│   └── schemas/                # Esquemas de validación
+├── tests/
+└── README.md
