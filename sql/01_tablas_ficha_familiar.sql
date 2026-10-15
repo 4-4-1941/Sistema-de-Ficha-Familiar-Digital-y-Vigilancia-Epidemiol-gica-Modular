@@ -1,26 +1,20 @@
 -- ============================================================================
--- SISTEMA DE FICHA FAMILIAR DIGITAL Y VIGILANCIA EPIDEMIOLÓGICA MODULAR
--- Módulo de Datos: Tablas independientes con prefijo 'ff_'
+-- FICHA FAMILIAR DIGITAL Y VIGILANCIA EPIDEMIOLÓGICA MODULAR
+-- Tablas independientes con prefijo 'ff_'
 -- 
--- REGLA DE SEGURIDAD:
--- - Este script NO modifica, NO altera y NO elimina ninguna tabla existente.
--- - Utiliza 'CREATE TABLE IF NOT EXISTS' para garantizar inocuidad.
--- - No tiene dependencias de tablas del banco de preguntas SERUMS.
+-- Protección de datos de salud:
+-- ON DELETE RESTRICT: Impide borrar accidentalmente un hogar si contiene personas.
 -- ============================================================================
 
--- Habilitar extensión para UUIDs si no estuviese activa
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- ----------------------------------------------------------------------------
--- 1. TABLA: ff_hogares
--- Representa la vivienda, ubicación geográfica y determinantes de la salud.
--- ----------------------------------------------------------------------------
+-- 1. TABLA: ff_hogares (Vivienda y determinantes de la salud)
 CREATE TABLE IF NOT EXISTS public.ff_hogares (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     fecha_registro TIMESTAMPTZ NOT NULL DEFAULT now(),
 
     -- Ubicación y Sectorización (MINSA / INEI)
-    ubigeo VARCHAR(6),                     -- Código de 6 dígitos (ej. '040101')
+    ubigeo VARCHAR(6),
     departamento VARCHAR(100),
     provincia VARCHAR(100),
     distrito VARCHAR(100),
@@ -38,50 +32,45 @@ CREATE TABLE IF NOT EXISTS public.ff_hogares (
     -- Determinantes sociales: Saneamiento y Vivienda
     nro_habitaciones_dormir INTEGER NOT NULL DEFAULT 1 CHECK (nro_habitaciones_dormir > 0),
     personas_por_habitacion NUMERIC(5, 2) DEFAULT 0.0,
-    fuente_agua VARCHAR(50),               -- 'red_domiciliaria', 'pilon', 'pozo', 'rio', 'camion'
-    agua_tratada BOOLEAN NOT NULL DEFAULT false, -- Clorada, hervida o filtrada
-    servicio_higienico VARCHAR(50),        -- 'alcantarillado', 'letrina_ventilada', 'pozo_ciego', 'campo_abierto'
-    combustible_cocina VARCHAR(50),        -- 'gas', 'electricidad', 'lenia_sin_chimenea', 'carbon'
-    disposicion_basura VARCHAR(50),        -- 'municipal', 'quema', 'campo_abierto', 'entierro'
+    fuente_agua VARCHAR(50),
+    agua_tratada BOOLEAN NOT NULL DEFAULT false,
+    servicio_higienico VARCHAR(50),
+    combustible_cocina VARCHAR(50),
+    disposicion_basura VARCHAR(50),
 
     -- Indicadores psicosociales y estructurales
     es_monoparental BOOLEAN NOT NULL DEFAULT false,
     tiene_desercion_escolar BOOLEAN NOT NULL DEFAULT false,
     riesgo_salud_mental BOOLEAN NOT NULL DEFAULT false,
-    presencia_vectores_criaduras BOOLEAN NOT NULL DEFAULT false, -- Dengue, Chagas, Zoonosis
+    presencia_vectores_criaduras BOOLEAN NOT NULL DEFAULT false,
 
     -- Banderas de vulnerabilidad agregadas calculadas
     banderas TEXT[] NOT NULL DEFAULT '{}',
 
     -- Auditoría
-    creado_por VARCHAR(100),               -- Identificador o usuario del profesional
+    creado_por VARCHAR(100),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE public.ff_hogares IS 'Registro de viviendas, ubicación y determinantes sociales de salud para Ficha Familiar.';
-
--- ----------------------------------------------------------------------------
--- 2. TABLA: ff_personas
--- Miembros del hogar, curso de vida y condiciones clínicas individuales.
--- ----------------------------------------------------------------------------
+-- 2. TABLA: ff_personas (Miembros del hogar, curso de vida y salud)
 CREATE TABLE IF NOT EXISTS public.ff_personas (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    hogar_id UUID NOT NULL REFERENCES public.ff_hogares(id) ON DELETE CASCADE,
+    hogar_id UUID NOT NULL REFERENCES public.ff_hogares(id) ON DELETE RESTRICT,
 
     -- Identificación personal
-    tipo_documento VARCHAR(20) NOT NULL DEFAULT 'DNI', -- 'DNI', 'CE', 'SIN_DOC'
+    tipo_documento VARCHAR(20) NOT NULL DEFAULT 'DNI',
     nro_documento VARCHAR(20),
     nombres_apellidos TEXT NOT NULL,
-    sexo SMALLINT NOT NULL CHECK (sexo IN (1, 2)),      -- 1: Masculino, 2: Femenino
+    sexo SMALLINT NOT NULL CHECK (sexo IN (1, 2)),
 
     -- Edad exacta y curso de vida (Norma MINSA)
     fecha_nacimiento DATE,
     edad_anios INTEGER NOT NULL DEFAULT 0 CHECK (edad_anios >= 0),
-    edad_meses INTEGER NOT NULL DEFAULT 0 CHECK (edad_meses >= 0), -- Vital para CRED (< 5 años)
+    edad_meses INTEGER NOT NULL DEFAULT 0 CHECK (edad_meses >= 0),
 
     -- Dinámica familiar y residencia
-    parentesco SMALLINT,                   -- 1: Jefe/a, 2: Cónyuge, 3: Hijo/a, etc.
+    parentesco SMALLINT,
     estado_civil SMALLINT,
     residente_habitual SMALLINT NOT NULL DEFAULT 1 CHECK (residente_habitual IN (0, 1)),
 
@@ -109,36 +98,26 @@ CREATE TABLE IF NOT EXISTS public.ff_personas (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE public.ff_personas IS 'Miembros del hogar con enfoque de curso de vida e indicadores individuales.';
-
--- ----------------------------------------------------------------------------
--- 3. TABLA: ff_intervenciones
--- Acciones y seguimiento por perfil profesional (médico, enfermería, psicología, etc.)
--- ----------------------------------------------------------------------------
+-- 3. TABLA: ff_intervenciones (Acciones por perfil profesional)
 CREATE TABLE IF NOT EXISTS public.ff_intervenciones (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    hogar_id UUID NOT NULL REFERENCES public.ff_hogares(id) ON DELETE CASCADE,
+    hogar_id UUID NOT NULL REFERENCES public.ff_hogares(id) ON DELETE RESTRICT,
     persona_id UUID REFERENCES public.ff_personas(id) ON DELETE SET NULL,
 
-    perfil_profesional VARCHAR(50) NOT NULL, -- 'ENFERMERIA', 'MEDICO', 'PSICOLOGIA', 'TRABAJO_SOCIAL', 'OBSTETRA'
+    perfil_profesional VARCHAR(50) NOT NULL,
     profesional_id VARCHAR(100) NOT NULL,
     profesional_nombre VARCHAR(150),
     fecha_intervencion TIMESTAMPTZ NOT NULL DEFAULT now(),
 
-    tipo_accion VARCHAR(100) NOT NULL,       -- 'VACUNACION', 'TAMIZAJE_SALUD_MENTAL', 'CONTROL_CRED', 'VISITA_INTEGRAL'
+    tipo_accion VARCHAR(100) NOT NULL,
     observaciones TEXT,
-    resultado VARCHAR(50)                    -- 'COMPLETADO', 'PENDIENTE', 'REFERIDO'
-        CHECK (resultado IN ('COMPLETADO', 'PENDIENTE', 'REFERIDO')),
+    resultado VARCHAR(50) CHECK (resultado IN ('COMPLETADO', 'PENDIENTE', 'REFERIDO')),
 
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE public.ff_intervenciones IS 'Registro modular de intervenciones y visitas domiciliarias en el marco de la Ficha Familiar.';
-
--- ----------------------------------------------------------------------------
--- ÍNDICES DE RENDIMIENTO (Búsqueda rápida en campo)
--- ----------------------------------------------------------------------------
+-- 4. ÍNDICES (Para búsqueda ágil en campo)
 CREATE INDEX IF NOT EXISTS idx_ff_hogares_ubigeo ON public.ff_hogares(ubigeo);
 CREATE INDEX IF NOT EXISTS idx_ff_personas_hogar_id ON public.ff_personas(hogar_id);
 CREATE INDEX IF NOT EXISTS idx_ff_personas_doc ON public.ff_personas(nro_documento);
