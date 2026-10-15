@@ -1,1 +1,103 @@
-
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/ficha-familiar.schema.json",
+  "title": "Ficha Familiar Digital",
+  "description": "Esquema para validar datos de hogares, personas e intervenciones.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["hogar", "personas"],
+  "properties": {
+    "hogar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": {"type": "string", "format": "uuid"},
+        "fecha_registro": {"type": ["string", "null"], "format": "date-time"},
+        "ubigeo": {"type": ["string", "null"], "pattern": "^[0-9]{6}$"},
+        "departamento": {"type": ["string", "null"]},
+        "provincia": {"type": ["string", "null"]},
+        "distrito": {"type": ["string", "null"]},
+        "centro_poblado": {"type": ["string", "null"]},
+        "conglomerado_manzana": {"type": ["string", "null"]},
+        "direccion": {"type": ["string", "null"]},
+        "telefono": {"type": ["string", "null"]},
+        "latitud": {"type": ["number", "null"], "minimum": -90, "maximum": 90},
+        "longitud": {"type": ["number", "null"], "minimum": -180, "maximum": 180},
+        "altitud": {"type": ["number", "null"]},
+        "precision_gps_metros": {"type": ["number", "null"], "minimum": 0},
+        "nro_habitaciones_dormir": {"type": "integer", "minimum": 1},
+        "personas_por_habitacion": {"type": "number", "minimum": 0},
+        "fuente_agua": {"type": ["string", "null"]},
+        "agua_tratada": {"type": "boolean"},
+        "servicio_higienico": {"type": ["string", "null"]},
+        "combustible_cocina": {"type": ["string", "null"]},
+        "disposicion_basura": {"type": ["string", "null"]},
+        "es_monoparental": {"type": "boolean"},
+        "tiene_desercion_escolar": {"type": "boolean"},
+        "riesgo_salud_mental": {"type": "boolean"},
+        "presencia_vectores_criaduras": {"type": "boolean"},
+        "banderas": {"type": "array", "items": {"type": "string"}},
+        "creado_por": {"type": ["string", "null"]},
+        "actualizado_en": {"type": ["string", "null"], "format": "date-time"}
+      }
+    },
+    "personas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "hogar_id", "nombres_apellidos"],
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "hogar_id": {"type": "string", "format": "uuid"},
+          "tipo_documento": {"enum": ["DNI", "CE", "SIN_DOC"]},
+          "nro_documento": {"type": ["string", "null"]},
+          "nombres_apellidos": {"type": "string", "minLength": 1},
+          "sexo": {"type": ["integer", "null"], "enum": [1, 2, null]},
+          "fecha_nacimiento": {"type": ["string", "null"], "format": "date"},
+          "edad_anios": {"type": "integer", "minimum": 0},
+          "edad_meses": {"type": "integer", "minimum": 0},
+          "parentesco": {"type": ["integer", "null"]},
+          "estado_civil": {"type": ["integer", "null"]},
+          "residente_habitual": {"type": "integer", "enum": [0, 1]},
+          "nivel_instruccion": {"type": ["integer", "null"]},
+          "asiste_escuela": {"type": ["boolean", "null"]},
+          "aporta_ingresos": {"type": ["integer", "null"], "enum": [0, 1, null]},
+          "ocupacion": {"type": ["string", "null"]},
+          "seguro_salud": {"type": ["string", "null"]},
+          "es_gestante": {"type": "boolean"},
+          "semanas_gestacion": {"type": ["integer", "null"], "minimum": 0, "maximum": 42},
+          "fecha_probable_parto": {"type": ["string", "null"], "format": "date"},
+          "tiene_enfermedad_cronica": {"type": "boolean"},
+          "diagnosticos_cronicos": {"type": "array", "items": {"type": "string"}},
+          "discapacidad": {"type": "boolean"},
+          "tipo_discapacidad": {"type": ["string", "null"]},
+          "banderas": {"type": "array", "items": {"type": "string"}},
+          "edad": {"type": "integer", "minimum": 0},
+          "fecha_nacimiento_dia": {"type": ["integer", "null"], "minimum": 1, "maximum": 31},
+          "fecha_nacimiento_mes": {"type": ["integer", "null"], "minimum": 1, "maximum": 12}
+        }
+      }
+    },
+    "intervenciones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "hogar_id", "perfil_profesional", "tipo_accion"],
+        "properties": {
+          "id": {"type": "string", "format": "uuid"},
+          "hogar_id": {"type": "string", "format": "uuid"},
+          "persona_id": {"type": ["string", "null"], "format": "uuid"},
+          "perfil_profesional": {"type": "string", "enum": ["ENFERMERIA", "MEDICO", "PSICOLOGIA", "TRABAJO_SOCIAL", "OBSTETRA", "ODONTOLOGIA"]},
+          "profesional_id": {"type": "string"},
+          "profesional_nombre": {"type": ["string", "null"]},
+          "fecha_intervencion": {"type": "string", "format": "date-time"},
+          "tipo_accion": {"type": "string", "minLength": 1},
+          "observaciones": {"type": ["string", "null"]},
+          "resultado": {"type": ["string", "null"], "enum": ["COMPLETADO", "PENDIENTE", "REFERIDO", null]}
+        }
+      }
+    }
+  }
+}

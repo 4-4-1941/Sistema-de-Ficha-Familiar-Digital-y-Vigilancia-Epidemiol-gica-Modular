@@ -1,60 +1,31 @@
 # Sistema de Ficha Familiar Digital y Vigilancia Epidemiológica Modular
 
-Herramienta digital diseñada para profesionales de **SERUMS** y equipos de salud pública en Perú.
+Herramienta digital en construcción para profesionales de **SERUMS** y equipos de salud pública en Perú.
+
+> 🤝 **Desarrollo y colaboración:** Proyecto en construcción mediante colaboración integral entre conocimiento de salud comunitaria y epidemiología, y herramientas de inteligencia artificial. Las propuestas generadas con IA requieren revisión y validación profesional antes de su uso operativo o clínico.
 
 ## ¿Para qué sirve?
 
-Este sistema permite:
+- Registrar la composición de los hogares y sus condiciones de vivienda.
+- Identificar automáticamente banderas de vulnerabilidad familiar e individual.
+- Georreferenciar viviendas para apoyar la vigilancia epidemiológica.
+- Facilitar intervenciones diferenciadas según el perfil profesional.
+- Apoyar acciones de promoción, prevención y respuesta en salud pública.
 
-- Registrar la composición completa de los hogares (Ficha Familiar).
-- Identificar automáticamente a las personas vulnerables de cada hogar (lactantes, niños, gestantes, adultos mayores, personas con enfermedades crónicas, etc.).
-- Georreferenciar las viviendas de forma automática.
-- Facilitar la intervención de diferentes profesionales de la salud según su rol (enfermeras, médicos, psicólogos, trabajadoras sociales, etc.).
-- Responder de forma rápida ante campañas de vacunación, brotes epidémicos (ejemplo: dengue) o programas de prevención.
+## Estado actual
 
-No es solo una herramienta de investigación: es una **base de datos operativa** para la acción en salud pública.
+El repositorio es un prototipo de lógica de dominio. Incluye modelos Python, cálculo inicial de banderas de vulnerabilidad y funciones de selección muestral. Aún no es una aplicación clínica lista para producción: faltan interfaz, persistencia, autenticación/autorización, sincronización, pruebas automatizadas y validación normativa y sanitaria.
 
-## Características principales
+No registrar datos reales de pacientes o familias en este prototipo. Los datos de salud y geolocalización requieren protección, controles de acceso y evaluación de privacidad antes de cualquier piloto.
 
-- **Registro dinámico de la Ficha Familiar**  
-  Captura de todos los miembros del hogar con datos demográficos, parentesco, instrucción, aportes económicos y condición de residente habitual.
+## Estructura
 
-- **Banderas automáticas de vulnerabilidad**  
-  El sistema calcula automáticamente perfiles de riesgo del hogar (ej. presencia de lactantes, adultos mayores, gestantes, personas con enfermedades crónicas, etc.).
+- `src/models/`: modelos de Hogar, Persona e Intervención.
+- `src/core/`: reglas de negocio, selección muestral y banderas.
+- `src/services/`: servicios de aplicación.
+- `data/schemas/`: esquemas de validación JSON.
+- `docs/`: visión, alcance, perfiles y referencias normativas.
 
-- **Geolocalización en segundo plano**  
-  Captura de coordenadas GPS (latitud, longitud, altitud y precisión) de forma invisible al guardar la ficha.
+## Validación
 
-- **Módulos de intervención por perfil profesional**  
-  Cada profesional (enfermera, médico, psicólogo, trabajadora social, etc.) puede desplegar los campos de acción que le corresponden.
-
-- **Motores de selección aleatoria (opcionales)**  
-  - Tabla de Kish automatizada (ciega)  
-  - Método de cumpleaños como contingencia  
-  Disponibles cuando se necesite aplicar un módulo de preguntas a una persona seleccionada al azar.
-
-- **Exportación geoespacial**  
-  Generación de archivos compatibles con sistemas de información geográfica (GeoJSON, CSV y KML).
-
-## Público objetivo
-
-- Profesionales de SERUMS
-- Enfermeras y técnicos de enfermería
-- Médicos
-- Psicólogos
-- Trabajadoras sociales
-- Equipos de vigilancia epidemiológica y atención primaria
-
-## Estructura del repositorio (en desarrollo)
-
-```text
-├── docs/                       # Documentación
-├── src/
-│   ├── core/                   # Lógica principal (Kish, banderas, GPS, etc.)
-│   ├── models/                 # Modelos de datos
-│   ├── services/               # Lógica de negocio
-│   └── ...
-├── data/
-│   └── schemas/                # Esquemas de validación
-├── tests/
-└── README.md
+Las reglas de vulnerabilidad y los catálogos incluidos son iniciales y deben revisarse con profesionales, normativa vigente y protocolos aplicables antes de usarse en decisiones clínicas o de salud pública.
