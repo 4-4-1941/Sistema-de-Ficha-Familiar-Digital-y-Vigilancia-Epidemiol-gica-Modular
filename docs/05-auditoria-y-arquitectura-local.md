@@ -1,7 +1,7 @@
 # 05 - Auditoría y arquitectura (modelo local por suscripción)
 
 **Proyecto:** Sistema de Ficha Familiar Digital y Vigilancia Epidemiológica Modular
-**Fecha:** 2026-10-15 (versión 2: normas verificadas en fuentes oficiales)
+**Fecha:** 2026-10-16 (versión 3: fuentes del repositorio SIP-AI-RAG)
 **Estado:** propuesta para revisión profesional. Nada de lo aquí descrito está implementado ni validado por un profesional.
 
 ---
@@ -15,6 +15,8 @@
 | Fuente común | La lista de miembros del hogar es la base. Cada profesión cambia **banderas y módulos**, no la estructura familiar. |
 | Perfiles | Enfermería (CRED, vacunas), Nutrición (vaso de leche), Psicología (tamizajes), Medicina, Obstetricia, Trabajo Social, Odontología. |
 | Casos de uso | Dengue, vacunación, vaso de leche, tamizajes de salud mental, otros programas. |
+| Fuera de alcance | Los 4 grupos de la ficha del estudio INSM (Adulto, Adolescente, Mujer unida, Adulto mayor) y su selección Kish fueron solo para ese estudio. **No se usan aquí.** |
+| Fuente normativa | Primero el repositorio **SIP-AI-RAG** (`knowledge/` y `data/metadata/`). Si falta algo, la web. |
 
 **Consecuencia:** el servidor central guarda **reglas** (catálogos, banderas, normas). El dispositivo guarda **personas**.
 
@@ -22,18 +24,19 @@
 
 ## 2. Qué cambia en la auditoría previa
 
-| # | Hallazgo previo | Estado con el modelo local |
+| # | Hallazgo | Estado |
 |---|---|---|
-| 1 | RLS: solo el creador ve su hogar | ✅ Deja de ser problema (no hay datos centrales) |
+| 1 | RLS: solo el creador ve su hogar | ✅ Ya no es problema (no hay datos centrales) |
 | 2 | Contradicción local vs. Supabase | ✅ Resuelta: **local** |
-| 3 | Agua "no segura" casi siempre activa | ⚠️ Sigue. Corregir regla |
-| 4 | Edad por defecto 0 = lactante | ⚠️ Sigue. Corregir regla |
-| 5 | Edad y banderas guardadas se desactualizan | ⚠️ Sigue. Calcular al momento |
-| 6 | Textos libres en campos clave | ⚠️ Sigue. Usar listas cerradas |
-| 7 | Salud mental como sí/no del hogar | ⚠️ Sigue. Pasa a módulo de Psicología |
-| 8 | Tablas `ff_` en Supabase con datos nominales | ⚠️ **No cargar datos reales.** Usar solo como esquema de referencia |
-| 9 | **Nuevo:** el modelo no cubre el contenido mínimo oficial de la Ficha Familiar | ⚠️ Ver sección 7 |
-| 10 | **Nuevo:** CRED y vacunación cambiaron de norma | ⚠️ Ver sección 7 |
+| 3 | Agua "no segura" casi siempre activa | ✅ Corregido (`vulnerability_flags.py` v1.2) |
+| 4 | Edad por defecto 0 = lactante | ✅ Corregido (nueva `BANDERA_EDAD_FALTANTE`) |
+| 5 | Edad y banderas guardadas se desactualizan | ⚠️ Parcial: las banderas se calculan, pero `persona.py` aún guarda edades |
+| 6 | Textos libres en campos clave | ⚠️ Pendiente: usar catálogos de la ficha oficial |
+| 7 | Salud mental como sí/no del hogar | ⚠️ Pendiente: pasa a módulo de Psicología |
+| 8 | Tablas `ff_` con datos nominales en Supabase | ⚠️ No cargar datos reales; usar solo como esquema |
+| 9 | Contenido mínimo de la Ficha Familiar oficial | ⚠️ Ver sección 7.3 |
+| 10 | CRED y vacunación cambiaron de norma | ⚠️ Ver sección 7.1 |
+| 11 | **Nuevo:** faltan etapas de vida Joven y Adulto | ⚠️ Ver sección 7.4 |
 
 ---
 
@@ -50,8 +53,6 @@
 
 **Núcleo (lo que todos ven):** hogar, ubicación, vivienda y miembros con fecha de nacimiento, sexo, parentesco, residencia habitual, gestante sí/no, lactancia sí/no.
 
-**Módulos (cada profesión agrega solo lo suyo):**
-
 | Perfil | Módulo | Ejemplos de campos |
 |---|---|---|
 | Enfermería | CRED y vacunas | Controles, esquema de vacunación |
@@ -61,129 +62,153 @@
 | Obstetricia | Gestantes | Controles prenatales |
 | Trabajo Social | Social | Redes de apoyo, derivaciones |
 
-**Principio de mínimo dato:** una enfermera **no** debe capturar salud mental. Cada módulo guarda solo los datos de su profesión.
+**Principio de mínimo dato:** cada módulo guarda solo los datos de su profesión (una enfermera no captura salud mental).
 
 ### 3.3 Banderas como paquete de reglas
 
-- Cada perfil recibe un **paquete de reglas** (archivo JSON versionado) con: código de bandera, condición, norma de referencia, fecha de vigencia.
-- La bandera se **calcula al abrir** la ficha. No se guarda (así no se desactualiza).
-- Cuando cambia una norma, se publica una **nueva versión** del paquete. No se reprograma la app.
+- Cada perfil recibe un **paquete de reglas** (JSON versionado): código, condición, norma, vigencia.
+- La bandera se **calcula al abrir** la ficha. No se guarda.
+- Dos tipos de regla:
+  - **Bandera de etapa de vida** (lactante, niño, adolescente, joven, adulto, adulto mayor).
+  - **Regla de programa** con su propia edad (ej. VPH de 9 a 18 años), porque puede cruzar etapas.
+- Cuando cambia una norma, se publica una **nueva versión** del paquete.
 
 ```json
 {
-  "codigo": "BANDERA_LACTANTE",
-  "perfiles": ["ENFERMERIA", "NUTRICION", "MEDICO"],
-  "condicion": "edad_meses < 12",
-  "norma": "NTS 238-MINSA/DGIESP-2025 (CRED)",
-  "vigente_desde": "POR CONFIRMAR",
+  "codigo": "VAC_VPH_9_A_18",
+  "tipo": "programa",
+  "perfiles": ["ENFERMERIA"],
+  "condicion": "edad_anios >= 9 and edad_anios <= 18",
+  "norma": "NTS 246-MINSA/DGIESP-2026, Anexo 17, p. 125",
+  "vigente_desde": "2026-06-13",
   "version": "1.0.0"
 }
 ```
-
-### 3.4 Qué banderas usaría cada decisión (orientativo)
-
-| Decisión | Banderas / filtros de apoyo |
-|---|---|
-| **Dengue** | Riesgo vectorial, agua almacenada, febriles en el hogar, gestantes, niños, adultos mayores |
-| **Vacunación** | Todas las edades según el nuevo Esquema Nacional de Inmunizaciones (incluye gestantes y grupos de riesgo) |
-| **CRED** | Niños hasta 11 años, 11 meses y 29 días (norma 2025) |
-| **Vaso de leche** | Niños de 0 a 6 años, gestantes, madres lactantes; luego 7 a 13 años, ancianos y afectados por TBC |
-| **Tamizajes de salud mental** | Adolescentes, adultos mayores, hogar monoparental, violencia (módulo de Psicología) |
-| **Crónicos** | Adultos mayores, crónicos, discapacidad |
 
 ---
 
 ## 4. Seguridad y datos sensibles (Ley 29733 y su reglamento)
 
 - Guardar localmente **no exime** de la ley. Los datos de salud y ubicación son sensibles.
-- **Cifrar el almacenamiento local** con una clave del profesional (si pierde el celular, los datos no se leen).
+- **Cifrar el almacenamiento local** con una clave del profesional.
 - **Exportar solo cifrado** (respaldo y traspaso entre profesionales).
-- **Consentimiento informado** registrado antes de capturar datos en campo.
+- **Consentimiento informado** antes de capturar datos en campo. La NTS 139 trae un formato de consentimiento para tratamiento de datos personales (Anexo 11) que sirve de referencia.
 - **Sin analítica ni registros** que envíen datos de familias al servidor.
-- Si en el futuro se quieren **estadísticas agregadas**, solo conteos anónimos y con un mínimo de casos por celda, y evaluado por separado.
-- No presentar las banderas como diagnóstico. Son **alertas de priorización**.
+- Etnia, idioma y religión (la ficha oficial los incluye) son datos sensibles: dejarlos **opcionales**.
+- Estadísticas agregadas futuras: solo conteos anónimos, con mínimo de casos por celda y evaluado por separado.
+- Las banderas **no son diagnóstico**: son alertas de priorización.
 
 ---
 
 ## 5. Un solo profesional suscrito
 
-- Ese profesional crea la ficha y puede **exportar** listas para otros (ej. lista de niños para el vaso de leche).
-- Si otro profesional se suscribe, puede **importar** el archivo cifrado con consentimiento. Los identificadores (UUID generados en el celular) evitan choques al unir datos.
+- Ese profesional crea la ficha y **exporta** listas para otros (ej. niños para el vaso de leche).
+- Otro profesional suscrito puede **importar** el archivo cifrado con consentimiento. Los UUID generados en el celular evitan choques al unir datos.
 - No hay acceso compartido automático.
 
 ---
 
-## 6. Correcciones técnicas pendientes (en el código actual)
+## 6. Correcciones técnicas
 
-| Archivo | Problema | Corrección propuesta |
+| Archivo | Problema | Estado |
 |---|---|---|
-| `vulnerability_flags.py` | `or not agua_tratada` marca casi todo hogar | Evaluar fuente **y** tratamiento; red pública con cloro no es riesgo |
-| `vulnerability_flags.py` | `edad_anios = 0` por defecto marca lactante | Exigir fecha de nacimiento o marcar "dato faltante" |
-| `vulnerability_flags.py` | CRED asumido hasta 5 años | Ampliar a 11 años 11 meses 29 días (sección 7) |
-| `persona.py` | Guarda `edad_anios`, `edad_meses`, `banderas` | Calcular desde `fecha_nacimiento` |
-| `persona.py` | No existe campo de **lactancia** | Agregar "madre en período de lactancia" (lo exige el Vaso de Leche) |
-| `persona.py` | Discapacidad = sí/no + texto | Usar los 6 tipos de limitación y su origen (sección 7) |
-| `hogar.py` | `personas_por_habitacion` guardado | Calcular siempre |
-| `docs/02` vs código | 3 banderas no documentadas | Documentar o retirar |
-| `ficha_familiar.schema.json` vs SQL | `sexo` nulo distinto | Unificar |
-| Perfiles | JSON: 6 perfiles; hoja de ruta: 5 | Unificar lista |
-| Campos de vivienda | Textos libres | Listas cerradas (catálogo) |
-| Hacinamiento | Cuenta solo habitaciones para dormir | Documentar la definición propia (sección 7) |
+| `vulnerability_flags.py` | `or not agua_tratada` marcaba casi todo hogar | ✅ Corregido (v1.2) |
+| `vulnerability_flags.py` | `edad_anios = 0` marcaba lactante | ✅ Corregido |
+| `vulnerability_flags.py` | Reglas por persona duplicadas en `flag_calculator.py` | ✅ Unificadas |
+| `vulnerability_flags.py` | Hacinamiento con valor viejo guardado | ✅ Corregido |
+| `vulnerability_flags.py` | Faltan etapas **Joven (18-29)** y **Adulto (30-59)** | ⚠️ Pendiente |
+| `persona.py` | Guarda `edad_anios`, `edad_meses` | ⚠️ Pendiente: calcular desde `fecha_nacimiento` |
+| `persona.py` | No hay campo de **lactancia** | ⚠️ Pendiente (lo exige el Vaso de Leche) |
+| `persona.py` | Discapacidad = sí/no + texto | ⚠️ Pendiente: 6 tipos de limitación y su origen |
+| `persona.py` | Parentesco, estado civil e instrucción sin catálogo | ⚠️ Pendiente: usar los códigos de la ficha oficial (7.3) |
+| `docs/02` vs código | 3 banderas no documentadas | ⚠️ Pendiente |
+| Esquema JSON vs SQL | `sexo` nulo distinto; 6 vs 5 perfiles | ⚠️ Pendiente |
+| Campos de vivienda | Textos libres | ⚠️ Pendiente: listas cerradas |
+| Kish del repo | Una sola tabla, distinta a la del estudio INSM | ⏸️ Sin cambio: no se usa en este proyecto |
 
 ---
 
-## 7. Verificación normativa (consultada el 2026-10-15)
+## 7. Verificación normativa (consultada el 2026-10-16)
 
-### 7.1 Normas confirmadas en fuentes oficiales o de prensa oficial
+### 7.1 Normas confirmadas
 
-| Tema | Norma | Qué encontré | Impacto en el proyecto |
+| Tema | Norma | Qué dice | Fuente |
 |---|---|---|---|
-| **Ficha Familiar** | NTS N° 139-MINSA/2018/DGAIN (RM 214-2018/MINSA), numeral 5.2 | La Ficha Familiar es un **formato básico de la Historia Clínica**. Sigue citada en documentos de 2026. | La ficha debe tratarse como documento clínico. Ver brechas en 7.3 |
-| **CRED** | **NTS N° 238-MINSA/DGIESP-2025** (RM 682-2025/MINSA) | **Reemplaza la norma de 2017** (NTS 137). Amplía los controles **hasta 11 años, 11 meses y 29 días**. | Las banderas de CRED ya no deben limitarse a menores de 5 años |
-| **Vacunación** | **NTS N° 246-MINSA/DGIESP-2026** (RM 561-2026/MINSA, 13-jun-2026) | **Reemplaza el esquema 2022** (NTS 196) y deja sin efecto sus modificaciones 2023-2026. | No programar con NTS 196 ni 141. Falta leer el anexo con edades y dosis |
-| **Dengue: vigilancia** | NTS N° 230-MINSA/CDC-2025 (RM 473-2025/MINSA) | Vigilancia epidemiológica y laboratorio de dengue y otras arbovirosis. Obligatoria en todos los establecimientos. | Definiciones de caso para el módulo de dengue |
-| **Dengue: vector** | NTS N° 198-MINSA/DIGESA (RM 228-2023/MINSA) | Vigilancia entomológica y control de *Aedes aegypti*. | Base de la bandera de riesgo vectorial y criaderos |
-| **Dengue: atención** | NTS N° 211-MINSA/DGIESP-2024 (RM 175-2024/MINSA) | Atención integral de pacientes con dengue. El anexo 4 fue derogado por la norma 230. | Referencia clínica para Medicina y Enfermería |
-| **Vaso de Leche** | Ley N° 27470 (complementa la Ley 24059) | Beneficiarios: niños de 0 a 6 años, gestantes y madres en lactancia, con prioridad a desnutrición o TBC. Luego niños de 7 a 13 años, ancianos y afectados por TBC. | Es un programa **municipal** (no del MINSA). La lista que genere la app es de apoyo, no el padrón oficial |
-| **Hacinamiento** | INEI (déficit cualitativo de vivienda, 2019) | Más de 3 personas por habitación. Publicaciones antiguas de NBI usaron más de 3,4, sin contar baño, cocina, pasadizo ni garaje. | El corte "más de 3" es coherente. Pero INEI no cuenta solo dormitorios |
+| **Ficha Familiar** | NTS N° 139-MINSA/2018/DGAIN (RM 214-2018/MINSA), **Anexo 1** | Formato básico de la Historia Clínica. Texto completo en el repo. | SIP-AI-RAG: `knowledge/minsa/serums-2026-ii/187487-ministerio-de-salud.md` |
+| **CRED** | NTS N° 238-MINSA/DGIESP-2025 (RM 682-2025/MINSA, aprobada el 13-oct-2025) | Reemplaza la norma de 2017. Controles hasta **11 años, 11 meses y 29 días** (según página oficial del MINSA). | SIP-AI-RAG: `data/metadata/nino/` y `knowledge/minsa/nts-n-238-...pdf` (anexos sin leer) |
+| **Vacunación** | NTS N° 246-MINSA/DGIESP-2026 (RM 561-2026/MINSA, 13-jun-2026) | Reemplaza el esquema 2022. Anexo 17 con grupos por edad (ver 7.5). | SIP-AI-RAG: `knowledge/minsa/nts-n-246-...parte-1/parte-2.pdf` (escaneados) |
+| **Dengue: vigilancia** | NTS N° 230-MINSA/CDC-2025 (RM 473-2025/MINSA) | Vigilancia de dengue y otras arbovirosis. | SIP-AI-RAG: `data/metadata/arbovirosis/` y web |
+| **Dengue: vector** | NTS N° 198-MINSA/DIGESA (RM 228-2023/MINSA) | Vigilancia entomológica de *Aedes aegypti*. | Web |
+| **Dengue: atención** | NTS N° 211-MINSA/DGIESP-2024 (RM 175-2024/MINSA) | Atención integral del dengue. | Web |
+| **Vaso de Leche** | Ley N° 27470 | Niños de 0 a 6 años, gestantes y madres lactantes; luego 7 a 13 años, ancianos y afectados por TBC. Programa **municipal**. | Web (no está en el repo) |
+| **Hacinamiento** | INEI, déficit cualitativo de vivienda (2019) | Más de 3 personas por habitación; INEI no cuenta solo dormitorios. | Web |
 
-### 7.2 Lo que **no** pude confirmar (pendiente)
+### 7.2 Aún no confirmado
 
-- **Texto oficial completo** del anexo de la Ficha Familiar. Solo leí un resumen de 2020 del Instituto Nacional de Rehabilitación (INR).
-- **Anexos de las normas 238 (CRED) y 246 (vacunación):** edades exactas, dosis y periodicidad.
+- **Dosis e intervalos** de cada vacuna: están en la parte 1 de la NTS 246 (97 páginas escaneadas), todavía sin leer.
+- **Anexos de la NTS 238 (CRED):** edades y controles exactos.
 - **Agua segura:** criterio oficial para la bandera.
-- **Tamizajes de salud mental:** norma que fija PHQ-9, SRQ u otros.
-- **Vacuna contra el dengue:** solo la vi en un sitio no oficial. No usarla hasta confirmar.
+- **Tamizajes de salud mental:** el repo tiene `data/metadata/salud-mental/` (RM 136-2023 depresión, RM 686-2024, Manual HIS 2025). Falta revisarlos.
+- **Vacuna contra el dengue:** solo vista en un sitio no oficial. No usar.
 - **Edad de "ancianos"** en el Vaso de Leche: la ley no la fija en lo que revisé.
 
-### 7.3 Brechas del modelo frente al contenido mínimo de la Ficha Familiar
+### 7.3 Ficha Familiar oficial (NTS 139, Anexo 1) frente al modelo
 
-Según el resumen del INR, la ficha tiene 9 partes:
-
-| Parte oficial | ¿Lo cubre el modelo actual? |
+| Parte oficial | ¿Lo cubre el modelo? |
 |---|---|
-| I. Datos generales | ✅ Parcial |
-| II. Localización de la vivienda y datos sociodemográficos | ✅ Sí |
-| III. Visita de salud familiar | ❌ No (fechas y seguimiento de visitas) |
-| IV. Características de los miembros de la familia | ✅ Sí |
-| V. Instrumentos de evaluación familiar | ❌ No |
-| VI. Riesgos por etapa de vida y como familia (incluye discapacidad) | ⚠️ Parcial: falta el detalle de limitaciones |
-| VII. Características de la familia y la vivienda | ✅ Sí |
-| VIII. Riesgos del entorno | ✅ Parcial (agua, vectores, combustible) |
-| IX. Paquete de Atención Integral de la Familia (PAIFAM) | ❌ No |
+| I. Datos generales (integrantes por etapa de vida) | ⚠️ Parcial |
+| II. Localización de la vivienda y datos sociodemográficos | ✅ Parcial |
+| III. Visita de salud familiar (fecha, responsable, resultado, próxima visita) | ❌ No |
+| IV. Características de los miembros | ✅ Parcial (ver abajo) |
+| V. Instrumentos de evaluación familiar (ciclo vital, ecomapa, familiograma, tipo de familia) | ❌ No |
+| VI. Riesgos por etapa de vida y como familia | ⚠️ Parcial |
+| VII a IX. Características de la familia y la vivienda, riesgos del entorno, PAIFAM | ⚠️ Según el resumen del INR (2020); falta releer el anexo |
 
-Además, el resumen del INR indica:
-- **Discapacidad:** 6 tipos de limitación (moverse, entender o aprender, ver, oír, hablar o comunicarse, relacionarse) y su origen.
-- **Niños:** matriz de cumplimiento de vacunas y CRED, y signos de alarma por edad.
-- **Mayores de 5 años:** enfermedades como hipertensión y diabetes.
+**Campos oficiales de cada miembro (parte IV):** nombres y apellidos, edad y sexo, DNI o carnet de extranjería, fecha de nacimiento, parentesco, estado civil, grado de instrucción, ocupación, condición de la ocupación, seguro de salud (SIS, EsSalud/FFAA/PNP, privado). A nivel de familia: etnia, idioma y religión.
+
+**Catálogos oficiales (para reemplazar textos libres):**
+- **Parentesco:** padre, madre, hijo/a, hijo/a adoptivo/a, abuelo/a, tío/a, nieto/a, padrastro, madrastra, sobrino/a, primo/a, bisabuelo/a, amigo/a, hermano/a, yerno, nuera.
+- **Estado civil:** soltero/a, conviviente, casado/a, separado/a, divorciado/a, viudo/a, otros.
+- **Grado de instrucción:** sin instrucción, inicial, primaria (completa/incompleta), secundaria (completa/incompleta), superior (completo/incompleto).
+- **Condición de la ocupación:** estable, eventual, sin ocupación, jubilado/a, estudiante.
+
+*Nota: el texto del repo viene de un escaneo con errores de lectura (OCR). Antes de programar, comparar con el PDF.*
+
+### 7.4 Etapas de vida de la ficha oficial
+
+| Etapa | Edad |
+|---|---|
+| Niño | 0 a 11 años |
+| Adolescente | 12 a 17 años |
+| Joven | 18 a 29 años |
+| Adulto | 30 a 59 años |
+| Adulto mayor | 60 años a más (la cifra salió ilegible en el escaneo; coincide con el Anexo 17 de la NTS 246) |
+
+El código actual tiene lactante, niño de 1 a 4, niño de 5 a 11, adolescente y adulto mayor. **Faltan Joven y Adulto.**
+
+### 7.5 Vacunación por grupos (NTS 246, Anexo 17, págs. 121-129)
+
+El Anexo 17 son **criterios de programación**, no el esquema clínico.
+
+| Grupo | Biológicos que aparecen |
+|---|---|
+| Recién nacidos | BCG, hepatitis B (primeras 24 h), nirsevimab (anticuerpo monoclonal) |
+| Menores de 5 años | Rotavirus, pentavalente o hexavalente (2, 4 y 6 meses), neumococo, influenza, SPR, antiamarílica (15 meses), refuerzo DPT a los 4 años |
+| 9 a 18 años | VPH, dosis única; prioridad a los 9 años |
+| 5 a 59 años | Hepatitis B, DT, influenza, antiamarílica, SPR en zonas de riesgo, neumococo en comorbilidad, Tdap en brotes de tos ferina |
+| 60 años a más | Influenza, neumococo |
+| Gestantes | Tdap (20 a 36 semanas), VRS (32 a 36 semanas), hepatitis B |
+| Especiales (VIH, inmunodeprimidos) | Hexavalente acelular, meningococo, DPT-IPV |
+
+*El indicador de cobertura mide a los 24 meses, pero el esquema continúa hasta la vejez. Lectura por OCR: confirmar contra el PDF antes de usar.*
 
 ---
 
 ## 8. Orden sugerido
 
-1. Corregir las reglas de banderas (sección 6).
-2. Definir el núcleo común y la lista cerrada de campos, usando las 9 partes de la ficha (7.3).
-3. Obtener el anexo oficial de la Ficha Familiar y los anexos de las normas 238 y 246.
+1. Agregar las etapas Joven y Adulto, y reglas de programa con su propia edad (7.4 y 7.5).
+2. Definir el núcleo de campos con los catálogos oficiales (7.3).
+3. Leer la parte 1 de la NTS 246 y los anexos de la NTS 238 (dosis, intervalos y controles).
 4. Primer perfil: enfermería (CRED y vacunas).
 5. Almacenamiento local cifrado y exportación.
-6. Segundo perfil (nutrición o psicología).
+6. Segundo perfil (psicología, con las normas de salud mental del repo).
