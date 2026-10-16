@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ficha Familiar Digital · prototipo</title>
+<link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+<main>
+<h1>🏠 Ficha Familiar Digital</h1>
+<p class="sub">Prototipo · los datos se quedan en este dispositivo · alertas de priorización, no diagnóstico</p>
+
+<div class="card"><h2>Perfil profesional</h2>
+<div class="seg" id="perfiles"></div></div>
+
+<div class="card"><h2>1 · Hogar</h2>
+<div class="row">
+<div><label>Fuente de agua</label><select id="agua"><option value="">—</option><option value="red_domiciliaria">Red pública</option><option value="pilon">Pilón público</option><option value="pozo">Pozo</option><option value="manantial">Manantial</option><option value="rio">Río o acequia</option><option value="lluvia">Agua de lluvia</option><option value="camion">Camión cisterna</option></select></div>
+<div><label>Servicio higiénico</label><select id="san"><option value="">—</option><option value="red">Red pública</option><option value="pozo_ciego">Pozo ciego</option><option value="rio">Río o acequia</option><option value="no_tiene">No tiene</option></select></div>
+<div><label>Combustible para cocinar</label><select id="comb"><option value="">—</option><option value="gas">Gas</option><option value="electricidad">Electricidad</option><option value="lenia_sin_chimenea">Leña sin chimenea</option><option value="bosta">Bosta</option><option value="carbon">Carbón</option></select></div>
+<div><label>Habitaciones para dormir</label><input id="dorm" type="number" min="1" value="1"></div>
+</div>
+<label class="ck"><input type="checkbox" id="tratada"> Trata el agua (hierve, clora o filtra)</label>
+<label class="ck"><input type="checkbox" id="vect"> Hay criaderos o vectores (dengue)</label>
+<label class="ck"><input type="checkbox" id="mono"> Familia monoparental</label>
+<div class="chips" id="fh"></div></div>
+
+<div class="card"><h2>2 · Agregar miembro</h2>
+<div class="row">
+<div><label>Nombre</label><input id="nom" placeholder="Nombre"></div>
+<div><label>Fecha de nacimiento</label><input id="fn" type="date"></div>
+</div>
+<label class="ck"><input type="checkbox" id="ges"> Gestante</label>
+<label class="ck"><input type="checkbox" id="lac"> Madre en período de lactancia</label>
+<label class="ck"><input type="checkbox" id="cro"> Enfermedad crónica</label>
+<label class="ck"><input type="checkbox" id="dis"> Discapacidad</label>
+<label class="ck"><input type="checkbox" id="esc"> No asiste a la escuela (3 a 17 años)</label>
+<div style="display:flex;gap:8px;margin-top:8px"><button class="p" id="add">Agregar</button><button id="demo">Cargar ejemplo</button><button id="clr">Borrar todo</button></div></div>
+
+<div class="card"><h2>3 · Miembros y banderas <span class="m" id="cnt"></span></h2><div id="lista"></div>
+<p class="warn">Reglas: etapas de vida según NTS 246-2026 (6.2) y NTS 139-2018. Esquema de vacunación: NTS 246-2026. Los criterios de Psicología y Medicina son provisionales hasta validar la norma.</p></div>
+</main>
+<script src="js/app.js"></script>
+</body>
+</html>
