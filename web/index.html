@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ficha Familiar Digital · prototipo</title>
-<link rel="stylesheet" href="estilos.css">
+<link rel="stylesheet" href="estilos.css?v=20261016-vac">
 </head>
 <body>
 <main>
@@ -40,7 +40,14 @@
 
 <div class="card"><h2>3 · Miembros y banderas <span class="m" id="cnt"></span></h2><div id="lista"></div>
 <p class="warn">Reglas: etapas de vida según NTS 246-2026 (6.2) y NTS 139-2018. Esquema de vacunación: NTS 246-2026. Los criterios de Psicología y Medicina son provisionales hasta validar la norma.</p></div>
+
+<div class="card"><h2>4 · Guardar y compartir (cifrado)</h2>
+<label>Clave (mínimo 8 caracteres)</label><input id="clave" type="password" autocomplete="off">
+<div style="display:flex;gap:8px;margin-top:8px"><button class="p" id="exp">Exportar archivo</button><button id="imp">Importar archivo</button></div>
+<input type="file" id="arch" accept=".ffd,application/json" hidden>
+<p class="msg" id="msg"></p>
+<p class="warn">El archivo sale cifrado con tu clave. Si la olvidas, no se puede abrir. Los datos guardados en este dispositivo no están cifrados: usa “Borrar todo” al terminar si el equipo es compartido.</p></div>
 </main>
-<script src="app.js"></script>
+<script src="app.js?v=20261016-vac"></script>
 </body>
 </html>
