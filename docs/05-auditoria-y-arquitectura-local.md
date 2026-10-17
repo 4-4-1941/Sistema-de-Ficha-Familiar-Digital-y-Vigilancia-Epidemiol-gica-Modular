@@ -1,7 +1,7 @@
 # 05 - Auditoría y arquitectura (modelo local por suscripción)
 
 **Proyecto:** Sistema de Ficha Familiar Digital y Vigilancia Epidemiológica Modular
-**Fecha:** 2026-10-16 (versión 4: esquema oficial de vacunación leído en el PDF)
+**Fecha:** 2026-10-16 (versión 4.1: esquema oficial de vacunación leído en el PDF; aclarado el origen de la decisión sobre el Kish)
 **Estado:** propuesta para revisión profesional. Nada de lo aquí descrito está implementado ni validado por un profesional.
 
 ---
@@ -15,7 +15,7 @@
 | Fuente común | La lista de miembros del hogar es la base. Cada profesión cambia **banderas y módulos**, no la estructura familiar. |
 | Perfiles | Enfermería (CRED, vacunas), Nutrición (vaso de leche), Psicología (tamizajes), Medicina, Obstetricia, Trabajo Social, Odontología. |
 | Casos de uso | Dengue, vacunación, vaso de leche, tamizajes de salud mental, otros programas. |
-| Fuera de alcance | Los 4 grupos de la ficha del estudio INSM (Adulto, Adolescente, Mujer unida, Adulto mayor) y su selección Kish fueron solo para ese estudio. **No se usan aquí.** |
+| Fuera de alcance | **Decisión del autor:** los 4 grupos de la ficha del estudio INSM (Adulto, Adolescente, Mujer unida, Adulto mayor) fueron solo para ese estudio y no se usan aquí. **Criterio de Claude, sin confirmar:** la selección Kish tampoco se usa, porque esta ficha necesita ver a todos los miembros y no elegir a uno. Si se quisiera un modo de encuesta con Kish, habría que definir antes los grupos de edad (el PDF del INSM y el Word de REDCap no coinciden). |
 | Fuente normativa | Primero el repositorio **SIP-AI-RAG** (`knowledge/` y `data/metadata/`). Si falta algo, la web. |
 
 **Consecuencia:** el servidor central guarda **reglas** (catálogos, banderas, normas). El dispositivo guarda **personas**.
