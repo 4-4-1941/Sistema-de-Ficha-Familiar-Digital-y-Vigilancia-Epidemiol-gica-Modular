@@ -4,6 +4,7 @@ var KEY="ffd-proto-1",PERF=[["ENFERMERIA","Enfermería"],["NUTRICION","Nutrició
 var H0={agua:"",san:"",comb:"",dorm:1,tratada:false,vect:false,mono:false};
 var S={h:Object.assign({},H0),p:[],perfil:"ENFERMERIA"};
 try{var j=localStorage.getItem(KEY);if(j)S=JSON.parse(j)}catch(e){}
+S.vis=S.vis||[];S.pai=S.pai||[];
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 var $=function(i){return document.getElementById(i)};
 function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
@@ -60,7 +61,24 @@ $("cnt").textContent="("+S.p.length+")";
 $("lista").innerHTML=S.p.length?S.p.map(function(p,i){var e=edad(p.fn),b=banP(p);var ed=e?(e.a<5?e.a+" a "+(e.m%12)+" m":e.a+" años"):"sin fecha";
 if(e&&S.perfil==="ENFERMERIA"&&dosis(p,e).some(function(x){return x.s==="pend"}))b=b.concat("VAC_PENDIENTE");
 var v=e?vista(i,p,e,b):"";
-return '<div class="pc"><b>'+esc(p.n||"Sin nombre")+'</b> <span class="m">· '+ed+'</span> <button data-d="'+i+'" style="float:right;padding:3px 9px">✕</button><div class="chips">'+chips(b)+'</div>'+v+'</div>'}).join(""):'<p class="m">Aún no hay miembros. Usa “Cargar ejemplo”.</p>'}
+return '<div class="pc"><b>'+esc(p.n||"Sin nombre")+'</b> <span class="m">· '+ed+'</span> <button data-d="'+i+'" style="float:right;padding:3px 9px">✕</button><div class="chips">'+chips(b)+'</div>'+v+'</div>'}).join(""):'<p class="m">Aún no hay miembros. Usa “Cargar ejemplo”.</p>';drawVP()}
+function hoy(){return new Date().toISOString().slice(0,10)}
+function fd(d){return d?d.split("-").reverse().join("/"):"—"}
+var RES={EJECUTADA:"Ejecutada",AUSENTE:"Ausente",RECHAZO:"Rechazo",ABANDONO:"Abandono"},EJE=["","Salud individual","Funciones de la familia","Condiciones materiales y entorno"],FD=/^\d{4}-\d{2}-\d{2}$/;
+function estPai(){var n=S.vis.filter(function(v){return v.res==="EJECUTADA"}).length;if(!S.pai.length)return"Sin PAIFAM";var ok=S.pai.every(function(x){var l=x.seg[x.seg.length-1];return l&&l.ok});return n>=4&&ok?"PAIFAM ejecutado":n>=3?"PAIFAM en proceso":"PAIFAM elaborado"}
+function genPai(){var ya=function(t){return S.pai.some(function(x){return x.p===t})},add=function(e,t){if(!ya(t))S.pai.push({e:e,p:t,a:"",r:"",seg:[]})};
+S.p.forEach(function(p){var e=edad(p.fn);if(!e)return;var b=banP(p);if(dosis(p,e).some(function(x){return x.s==="pend"}))b.push("VAC_PENDIENTE");
+b.forEach(function(c){if(["DESERCION_ESCOLAR","GESTANTE","CRONICO","DISCAPACIDAD","VAC_PENDIENTE","EDAD_FALTANTE"].indexOf(c)>-1)add(1,(p.n||"Sin nombre")+": "+L[c][0])})});
+banH().forEach(function(c){if(c!=="MONOPARENTAL")add(3,L[c][0])})}
+function drawVP(){$("vcnt").textContent="("+S.vis.length+")";
+$("vlist").innerHTML=S.vis.length?S.vis.map(function(v,i){return '<div class="pc"><b>'+fd(v.f)+'</b> · '+RES[v.res]+' <button data-vd="'+i+'" style="float:right;padding:3px 9px">✕</button><span class="m">'+(v.resp?esc(v.resp)+" · ":"")+"Próxima: "+fd(v.prox)+'</span></div>'}).join(""):'<p class="m">Aún no hay visitas.</p>';
+$("pst").textContent="· "+estPai();var h="";
+[1,2,3].forEach(function(e){var it=S.pai.map(function(x,i){return[x,i]}).filter(function(z){return z[0].e===e});if(!it.length)return;
+h+='<div class="pc"><b>'+EJE[e]+'</b>'+it.map(function(z){var x=z[0],i=z[1],l=x.seg[x.seg.length-1];
+return '<div class="prog">'+esc(x.p)+(x.a?'<span class="m">Acuerdo: '+esc(x.a)+'</span>':"")+(x.r?'<span class="m">Responsable: '+esc(x.r)+'</span>':"")+'<span class="m">'+(l?(l.ok?"✓ Cumplido ":"✗ No cumplido ")+fd(l.f):"Sin seguimiento")+'</span><button data-ps="1" data-pi="'+i+'" style="padding:3px 9px">✓</button> <button data-ps="0" data-pi="'+i+'" style="padding:3px 9px">✗</button> <button data-pd="'+i+'" style="padding:3px 9px;float:right">Quitar</button></div>'}).join("")+'</div>'});
+$("plist").innerHTML=h||'<p class="m">Aún no hay acuerdos.</p>'}
+function limV(a){return(Array.isArray(a)?a:[]).map(function(v){return{f:FD.test(v.f||"")?v.f:hoy(),res:RES[v.res]?v.res:"EJECUTADA",resp:String(v.resp||"").slice(0,80),prox:FD.test(v.prox||"")?v.prox:""}})}
+function limP(a){return(Array.isArray(a)?a:[]).map(function(x){return{e:[1,2,3].indexOf(+x.e)>-1?+x.e:1,p:String(x.p||"").slice(0,160),a:String(x.a||"").slice(0,160),r:String(x.r||"").slice(0,80),seg:(Array.isArray(x.seg)?x.seg:[]).map(function(q){return{f:FD.test(q.f||"")?q.f:hoy(),ok:!!q.ok}})}})}
 function rel(m){var d=new Date();d.setMonth(d.getMonth()-m);return d.toISOString().slice(0,10)}
 function msg(t,ok){var m=$("msg");m.textContent=t;m.style.color=ok?"var(--ok)":"var(--bad)"}
 
@@ -76,19 +94,25 @@ function limpiar(o){if(!o||!Array.isArray(o.p)||typeof o.h!=="object")throw new 
 var h=Object.assign({},H0,o.h);h.dorm=Math.max(1,+h.dorm||1);
 var p=o.p.map(function(x){var v={};if(x.vac&&typeof x.vac==="object")Object.keys(x.vac).forEach(function(k){if(/^[a-z0-9]{2,8}$/.test(k)&&/^\d{4}-\d{2}-\d{2}$/.test(x.vac[k]))v[k]=x.vac[k]});
 return{n:String(x.n||"").slice(0,80),fn:/^\d{4}-\d{2}-\d{2}$/.test(x.fn||"")?x.fn:"",ges:!!x.ges,lac:!!x.lac,cro:!!x.cro,dis:!!x.dis,esc:!!x.esc,vac:v}});
-return{h:h,p:p}}
+return{h:h,p:p,vis:limV(o.vis),pai:limP(o.pai)}}
 function claveOk(){var c=$("clave").value;if(!(window.crypto&&crypto.subtle)){msg("Este navegador o esta dirección no permite cifrar. Usa https.");return null}if(c.length<8){msg("La clave debe tener al menos 8 caracteres.");return null}return c}
 function exportar(){var c=claveOk();if(!c)return;msg("Cifrando…",true);
-cifrar(c,{h:S.h,p:S.p,fecha:new Date().toISOString()}).then(function(t){var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([t],{type:"application/json"}));a.download="ficha-familiar-"+new Date().toISOString().slice(0,10)+".ffd";document.body.appendChild(a);a.click();a.remove();msg("Archivo cifrado descargado. Guarda tu clave: sin ella no se puede abrir.",true)}).catch(function(){msg("No se pudo cifrar.")})}
+cifrar(c,{h:S.h,p:S.p,vis:S.vis,pai:S.pai,fecha:new Date().toISOString()}).then(function(t){var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([t],{type:"application/json"}));a.download="ficha-familiar-"+new Date().toISOString().slice(0,10)+".ffd";document.body.appendChild(a);a.click();a.remove();msg("Archivo cifrado descargado. Guarda tu clave: sin ella no se puede abrir.",true)}).catch(function(){msg("No se pudo cifrar.")})}
 function importar(file){var c=claveOk();if(!c)return;var r=new FileReader();
-r.onload=function(){descifrar(c,r.result).then(limpiar).then(function(d){if(!confirm("Se reemplazarán los datos de este dispositivo. ¿Continuar?")){msg("Importación cancelada.");return}S.h=d.h;S.p=d.p;save();draw();msg("Datos importados: "+d.p.length+" miembros.",true)}).catch(function(){msg("Clave incorrecta o archivo dañado.")})};
+r.onload=function(){descifrar(c,r.result).then(limpiar).then(function(d){if(!confirm("Se reemplazarán los datos de este dispositivo. ¿Continuar?")){msg("Importación cancelada.");return}S.h=d.h;S.p=d.p;S.vis=d.vis;S.pai=d.pai;save();draw();msg("Datos importados: "+d.p.length+" miembros.",true)}).catch(function(){msg("Clave incorrecta o archivo dañado.")})};
 r.readAsText(file)}
 
 document.addEventListener("click",function(ev){var t=ev.target;
 if(t.dataset.p){S.perfil=t.dataset.p}else if(t.dataset.d){S.p.splice(+t.dataset.d,1)}
 else if(t.id==="add"){S.p.push({n:$("nom").value.trim(),fn:$("fn").value,ges:$("ges").checked,lac:$("lac").checked,cro:$("cro").checked,dis:$("dis").checked,esc:$("esc").checked,vac:{}});["nom","fn"].forEach(function(k){$(k).value=""});["ges","lac","cro","dis","esc"].forEach(function(k){$(k).checked=false})}
 else if(t.id==="demo"){S.h={agua:"pozo",san:"pozo_ciego",comb:"lenia_sin_chimenea",dorm:1,tratada:false,vect:true,mono:false};S.p=[{n:"Abuela Rosa",fn:rel(68*12),cro:true,vac:{}},{n:"Madre Ana",fn:rel(30*12),ges:true,vac:{}},{n:"Luis",fn:rel(14*12),esc:true,vac:{}},{n:"Camila",fn:rel(38),vac:{}},{n:"Bebé Mateo",fn:rel(5),vac:{}}]}
-else if(t.id==="clr"){S.p=[];S.h=Object.assign({},H0)}
+else if(t.id==="clr"){S.p=[];S.vis=[];S.pai=[];S.h=Object.assign({},H0)}
+else if(t.id==="vadd"){S.vis.push({f:$("vf").value||hoy(),res:$("vr").value,resp:$("vp").value.trim().slice(0,80),prox:$("vx").value});["vf","vp","vx"].forEach(function(k){$(k).value=""})}
+else if(t.dataset.vd){S.vis.splice(+t.dataset.vd,1)}
+else if(t.id==="padd"){var pp=$("pp").value.trim();if(!pp)return;S.pai.push({e:+$("pe").value,p:pp.slice(0,160),a:$("pa").value.trim().slice(0,160),r:$("pr").value.trim().slice(0,80),seg:[]});["pp","pa","pr"].forEach(function(k){$(k).value=""})}
+else if(t.id==="pgen"){genPai()}
+else if(t.dataset.pd){S.pai.splice(+t.dataset.pd,1)}
+else if(t.dataset.ps){var q=S.pai[+t.dataset.pi];if(q)q.seg.push({f:hoy(),ok:t.dataset.ps==="1"})}
 else if(t.id==="exp"){exportar();return}
 else if(t.id==="imp"){$("arch").click();return}else return;
 save();draw()});
