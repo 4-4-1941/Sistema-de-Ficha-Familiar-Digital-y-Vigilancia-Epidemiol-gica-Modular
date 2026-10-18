@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ficha Familiar Digital · prototipo</title>
-<link rel="stylesheet" href="estilos.css?v=20261017-vis2">
+<link rel="stylesheet" href="estilos.css?v=20261018-paq">
 </head>
 <body>
 <main>
@@ -29,13 +29,16 @@
 <div class="card"><h2>2 · Agregar miembro</h2>
 <div class="row">
 <div><label>Nombre</label><input id="nom" placeholder="Nombre"></div>
-<div><label>Fecha de nacimiento</label><input id="fn" type="date"></div>
+<div><label>Sexo</label><select id="sx"><option value="">—</option><option value="F">Mujer</option><option value="M">Varón</option></select></div>
+<div><label>Fecha de nacimiento (dd/mm/aaaa)</label><input id="fn" inputmode="numeric" maxlength="10" placeholder="dd/mm/aaaa" autocomplete="off"></div>
+<div><label>O edad (se estima la fecha)</label><div style="display:flex;gap:6px"><input id="ea" type="number" min="0" max="120" placeholder="Años"><input id="em" type="number" min="0" max="11" placeholder="Meses"></div></div>
 </div>
-<label class="ck"><input type="checkbox" id="ges"> Gestante</label>
-<label class="ck"><input type="checkbox" id="lac"> Madre en período de lactancia</label>
+<p class="m" id="fmsg" style="color:var(--bad)"></p>
+<label class="ck" id="wges" hidden><input type="checkbox" id="ges"> Gestante</label>
+<label class="ck" id="wlac" hidden><input type="checkbox" id="lac"> Madre en período de lactancia</label>
 <label class="ck"><input type="checkbox" id="cro"> Enfermedad crónica</label>
 <label class="ck"><input type="checkbox" id="dis"> Discapacidad</label>
-<label class="ck"><input type="checkbox" id="esc"> No asiste a la escuela (3 a 17 años)</label>
+<label class="ck" id="wesc" hidden><input type="checkbox" id="esc"> No asiste a la escuela (3 a 17 años)</label>
 <div style="display:flex;gap:8px;margin-top:8px"><button class="p" id="add">Agregar</button><button id="demo">Cargar ejemplo</button><button id="clr">Borrar todo</button></div></div>
 
 <div class="card"><h2>3 · Miembros y banderas <span class="m" id="cnt"></span></h2><div id="lista"></div>
@@ -60,6 +63,6 @@
 <p class="msg" id="msg"></p>
 <p class="warn">El archivo sale cifrado con tu clave. Si la olvidas, no se puede abrir. Los datos guardados en este dispositivo no están cifrados: usa “Borrar todo” al terminar si el equipo es compartido.</p></div>
 </main>
-<script src="app.js?v=20261017-vis2"></script>
+<script src="app.js?v=20261018-paq"></script>
 </body>
 </html>

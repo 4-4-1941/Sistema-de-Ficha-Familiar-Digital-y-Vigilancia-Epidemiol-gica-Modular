@@ -37,3 +37,4 @@ details{margin-top:8px}summary{cursor:pointer;font-size:.88rem;font-weight:600;c
 input,select{min-width:0;max-width:100%}
 main{width:100%}
 @media (max-width:480px){.row{grid-template-columns:minmax(0,1fr)}}
+[hidden]{display:none!important}

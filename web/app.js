@@ -8,7 +8,7 @@ S.vis=S.vis||[];S.pai=S.pai||[];
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 var $=function(i){return document.getElementById(i)};
 function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
-var L={LACTANTE:["Lactante (menor de 1 año)","a"],NINO_1_A_4:["Niño de 1 a 4 años","a"],NINO_5_A_11:["Niño de 5 a 11 años",""],ADOLESCENTE:["Adolescente","a"],JOVEN:["Joven",""],ADULTO:["Adulto",""],ADULTO_MAYOR:["Adulto mayor","a"],GESTANTE:["Gestante","r"],MADRE_LACTANTE:["Madre lactante","a"],CRONICO:["Crónico","a"],DISCAPACIDAD:["Discapacidad","a"],DESERCION_ESCOLAR:["Deserción escolar","r"],EDAD_FALTANTE:["Falta fecha de nacimiento","r"],HACINAMIENTO:["Hacinamiento","r"],AGUA_NO_SEGURA:["Agua no segura","r"],SIN_SANEAMIENTO:["Sin saneamiento","r"],HUMO:["Humo en la cocina","a"],VECTORIAL:["Riesgo vectorial","r"],MONOPARENTAL:["Monoparental","a"],VAC_PENDIENTE:["Vacunas pendientes","r"]};
+var L={LACTANTE:["Lactante (menor de 1 año)","a"],NINO_1_A_4:["Niño de 1 a 4 años","a"],NINO_5_A_11:["Niño de 5 a 11 años",""],ADOLESCENTE:["Adolescente","a"],JOVEN:["Joven",""],ADULTO:["Adulto",""],ADULTO_MAYOR:["Adulto mayor","a"],GESTANTE:["Gestante","r"],MADRE_LACTANTE:["Madre lactante","a"],CRONICO:["Crónico","a"],DISCAPACIDAD:["Discapacidad","a"],DESERCION_ESCOLAR:["Deserción escolar","r"],EDAD_FALTANTE:["Falta fecha de nacimiento","r"],HACINAMIENTO:["Hacinamiento","r"],AGUA_NO_SEGURA:["Agua no segura","r"],SIN_SANEAMIENTO:["Sin saneamiento","r"],HUMO:["Humo en la cocina","a"],VECTORIAL:["Riesgo vectorial","r"],MONOPARENTAL:["Monoparental","a"],VAC_PENDIENTE:["Vacunas pendientes","r"],CRED_PENDIENTE:["Control CRED pendiente","r"],VLE_PENDIENTE:["Vaso de Leche por inscribir","a"]};
 function chips(a){return a.length?a.map(function(c){var l=L[c]||[c,""];return '<span class="f '+l[1]+'">'+l[0]+'</span>'}).join(""):'<span class="f v">Sin banderas</span>'}
 function edad(f){if(!f)return null;var n=new Date(),b=new Date(f+"T00:00:00");var m=(n.getFullYear()-b.getFullYear())*12+n.getMonth()-b.getMonth();if(n.getDate()<b.getDate())m--;return m<0?null:{m:m,a:Math.floor(m/12)}}
 function banP(p){var e=edad(p.fn),b=[];if(!e)return["EDAD_FALTANTE"];var a=e.a;
@@ -49,17 +49,38 @@ var h=r.map(function(x){var f=p.vac&&p.vac[x.id];var tx=x.s==="ok"?"✓ "+(f||""
 return '<label class="dv '+x.s+'"><input type="checkbox" data-v="'+x.id+'" data-i="'+i+'"'+(x.s==="ok"?" checked":"")+'><span><b>'+x.n+'</b> · '+x.d+'<span class="m">'+(x.m>=0&&x.s!=="ok"?cuando(x.m)+" · ":"")+tx+'</span></span></label>'}).join("");
 return '<details'+(n?" open":"")+'><summary>💉 Vacunas · '+n+' pendiente'+(n===1?"":"s")+'</summary>'+h+'<p class="m">Al marcar una dosis se guarda la fecha de hoy. SR/SPR y Tdap solo en zonas de brote o gestantes: no se cuentan como pendientes.</p></details>'}
 function vista(i,p,e,b){var t=[],a=e.a,pf=S.perfil;
-if(pf==="ENFERMERIA")return panelVac(i,p,e);
-if(pf==="NUTRICION"){if(a<=6||p.ges||p.lac)t.push("Vaso de Leche: prioridad 1 (niño de 0 a 6 años, gestante o madre lactante)");else if(a<=13)t.push("Vaso de Leche: prioridad 2 (7 a 13 años)");else if(a>=60)t.push("Vaso de Leche: prioridad 2 (adulto mayor; edad de anciano por confirmar)");else t.push("Sin criterio de Vaso de Leche por edad o condición")}
+if(pf==="ENFERMERIA")return panelVac(i,p,e)+panelCred(i,p,e);
+if(pf==="NUTRICION")return panelVle(i,p,e);
 if(pf==="PSICOLOGIA"){if(b.indexOf("ADOLESCENTE")>-1||b.indexOf("ADULTO_MAYOR")>-1||p.ges||p.lac)t.push("Priorizar tamizaje (criterio provisional)");else t.push("Sin prioridad por etapa (criterio provisional)")}
 if(pf==="MEDICINA"){if(p.cro||p.ges||p.dis||a>=60)t.push("Priorizar control: "+[p.cro&&"crónico",p.ges&&"gestante",p.dis&&"discapacidad",a>=60&&"adulto mayor"].filter(Boolean).join(", ")+" (criterio provisional)");else t.push("Sin prioridad por condición (criterio provisional)")}
 return t.map(function(x){return '<div class="prog">'+x+'</div>'}).join("")}
+// Fechas: se escribe dd/mm/aaaa (se guarda como aaaa-mm-dd). Alternativa: edad en años y meses (fecha estimada)
+function fmtF(t){var d=t.replace(/\D/g,"").slice(0,8),r=d.slice(0,2);if(d.length>2)r+="/"+d.slice(2,4);if(d.length>4)r+="/"+d.slice(4);return r}
+function parseF(t){var m=/^(\d{2})\/(\d{2})\/(\d{4})$/.exec(t);if(!m)return"";var d=+m[1],mo=+m[2],y=+m[3],x=new Date(y,mo-1,d);if(x.getFullYear()!==y||x.getMonth()!==mo-1||x.getDate()!==d||y<1900||x>new Date())return"";return y+"-"+m[2]+"-"+m[1]}
+function estF(a,m){var h=new Date(),dd=h.getDate();h.setDate(1);h.setMonth(h.getMonth()-(+m||0)-12*(+a||0));h.setDate(Math.min(dd,new Date(h.getFullYear(),h.getMonth()+1,0).getDate()));return h.getFullYear()+"-"+("0"+(h.getMonth()+1)).slice(-2)+"-"+("0"+h.getDate()).slice(-2)}
+function mostrar(){var f=parseF($("fn").value)||(($("ea").value||$("em").value)?estF($("ea").value,$("em").value):""),e=edad(f);$("wges").hidden=$("wlac").hidden=$("sx").value!=="F";$("wesc").hidden=!(e&&e.a>=3&&e.a<=17)}
+// Controles CRED (NTS 238-2025, numeral 6.4). [id, nombre, dia de vida en que inicia, dia en que termina]
+var CR=[["cr01","Recién nacido: 1er control",0,7],["cr02","Recién nacido: 2º control",8,14],["cr03","Recién nacido: 3er control",15,21],["cr04","Control del mes 1",29,59],["cr05","Control del mes 2",60,89],["cr06","Control del mes 3",90,119],["cr07","Control del mes 4",120,149],["cr08","Control del mes 6",180,209],["cr09","Control del mes 7",210,239],["cr10","Control del mes 9",270,299],["cr11","Control de 12 meses",360,389],["cr12","Control de 15 meses",450,479],["cr13","Control de 18 meses",540,569],["cr14","Control de 21 meses",630,659]];
+[24,30,36,42,48,54].forEach(function(m,i){CR.push(["cr"+(15+i),"Control de "+m+" meses",Math.round(m*30.4375),Math.round((m+6)*30.4375)-1])});
+for(var y=5;y<=11;y++)CR.push(["cr"+(21+y-5),"Control anual de "+y+" años",Math.round(y*365.25),Math.round((y+1)*365.25)-1]);
+function diaF(p,n){var d=new Date(p.fn+"T00:00:00");d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
+function cred(p,e){if(e.m>=144)return null;var d=Math.floor((new Date()-new Date(p.fn+"T00:00:00"))/864e5);return{cur:CR.filter(function(c){return d>=c[2]&&d<=c[3]})[0],nx:CR.filter(function(c){return c[2]>d})[0]}}
+function hechoP(p,id){return !!(p.vac&&p.vac[id])}
+function vle(p,e){var a=e.a;if(a<=6||p.ges||p.lac)return"Prioridad 1 (niño de 0 a 6 años, gestante o madre lactante)";if(a<=13)return"Prioridad 2 (7 a 13 años)";if(a>=60)return"Prioridad 2 (adulto mayor; la edad de “anciano” falta confirmar)";return null}
+function bPend(p,e){var b=[];if(dosis(p,e).some(function(x){return x.s==="pend"}))b.push("VAC_PENDIENTE");var c=cred(p,e);if(c&&c.cur&&!hechoP(p,c.cur[0]))b.push("CRED_PENDIENTE");if(vle(p,e)&&!hechoP(p,"vle1"))b.push("VLE_PENDIENTE");return b}
+function panelCred(i,p,e){var r=cred(p,e);if(!r)return"";var h="",pend=false;
+if(r.cur){var c=r.cur,ok=hechoP(p,c[0]);pend=!ok;h+='<label class="dv '+(ok?"ok":"pend")+'"><input type="checkbox" data-v="'+c[0]+'" data-i="'+i+'"'+(ok?" checked":"")+'><span><b>'+c[1]+'</b><span class="m">'+(ok?"✓ "+p.vac[c[0]]:"Corresponde del "+fd(diaF(p,c[2]))+" al "+fd(diaF(p,c[3])))+'</span></span></label>'}
+else h+='<p class="m">No hay control programado a esta edad.</p>';
+if(r.nx)h+='<p class="m">Próximo: '+r.nx[1]+', desde el '+fd(diaF(p,r.nx[2]))+'.</p>';
+return '<details'+(pend?" open":"")+'><summary>🩺 Control CRED · '+(pend?"pendiente":"al día")+'</summary>'+h+'<p class="m">El intervalo mínimo entre controles se cuenta desde el último control realizado (NTS 238-2025).</p></details>'}
+function panelVle(i,p,e){var v=vle(p,e);if(!v)return '<div class="prog">Sin criterio de Vaso de Leche por edad o condición</div>';var ok=hechoP(p,"vle1");
+return '<details open><summary>🥛 Vaso de Leche · '+(ok?"inscrito":"por inscribir")+'</summary><label class="dv '+(ok?"ok":"pend")+'"><input type="checkbox" data-v="vle1" data-i="'+i+'"'+(ok?" checked":"")+'><span><b>Inscrito en el padrón</b><span class="m">'+v+(ok?" · ✓ "+p.vac.vle1:"")+'</span></span></label><p class="m">Programa municipal (Ley 27470). Esta lista es de apoyo, no el padrón oficial.</p></details>'}
 function draw(){var h=S.h;$("agua").value=h.agua;$("san").value=h.san;$("comb").value=h.comb;$("dorm").value=h.dorm;$("tratada").checked=h.tratada;$("vect").checked=h.vect;$("mono").checked=h.mono;
 $("fh").innerHTML=chips(banH());
 $("perfiles").innerHTML=PERF.map(function(x){return '<button data-p="'+x[0]+'" class="'+(S.perfil===x[0]?"on":"")+'">'+x[1]+'</button>'}).join("");
 $("cnt").textContent="("+S.p.length+")";
-$("lista").innerHTML=S.p.length?S.p.map(function(p,i){var e=edad(p.fn),b=banP(p);var ed=e?(e.a<5?e.a+" a "+(e.m%12)+" m":e.a+" años"):"sin fecha";
-if(e&&S.perfil==="ENFERMERIA"&&dosis(p,e).some(function(x){return x.s==="pend"}))b=b.concat("VAC_PENDIENTE");
+$("lista").innerHTML=S.p.length?S.p.map(function(p,i){var e=edad(p.fn),b=banP(p);var ed=(e?(e.a<5?e.a+" a "+(e.m%12)+" m":e.a+" años"):"sin fecha")+(p.fe?" · fecha estimada":"")+(p.sx==="F"?" · mujer":p.sx==="M"?" · varón":"");
+if(e){var PF={ENFERMERIA:["VAC_PENDIENTE","CRED_PENDIENTE"],NUTRICION:["VLE_PENDIENTE"]}[S.perfil]||[];b=b.concat(bPend(p,e).filter(function(c){return PF.indexOf(c)>-1}))}
 var v=e?vista(i,p,e,b):"";
 return '<div class="pc"><b>'+esc(p.n||"Sin nombre")+'</b> <span class="m">· '+ed+'</span> <button data-d="'+i+'" style="float:right;padding:3px 9px">✕</button><div class="chips">'+chips(b)+'</div>'+v+'</div>'}).join(""):'<p class="m">Aún no hay miembros. Usa “Cargar ejemplo”.</p>';drawVP()}
 function hoy(){return new Date().toISOString().slice(0,10)}
@@ -67,8 +88,8 @@ function fd(d){return d?d.split("-").reverse().join("/"):"—"}
 var RES={EJECUTADA:"Ejecutada",AUSENTE:"Ausente",RECHAZO:"Rechazo",ABANDONO:"Abandono"},EJE=["","Salud individual","Funciones de la familia","Condiciones materiales y entorno"],FD=/^\d{4}-\d{2}-\d{2}$/;
 function estPai(){var n=S.vis.filter(function(v){return v.res==="EJECUTADA"}).length;if(!S.pai.length)return"Sin PAIFAM";var ok=S.pai.every(function(x){var l=x.seg[x.seg.length-1];return l&&l.ok});return n>=4&&ok?"PAIFAM ejecutado":n>=3?"PAIFAM en proceso":"PAIFAM elaborado"}
 function genPai(){var ya=function(t){return S.pai.some(function(x){return x.p===t})},add=function(e,t){if(!ya(t))S.pai.push({e:e,p:t,a:"",r:"",seg:[]})};
-S.p.forEach(function(p){var e=edad(p.fn);if(!e)return;var b=banP(p);if(dosis(p,e).some(function(x){return x.s==="pend"}))b.push("VAC_PENDIENTE");
-b.forEach(function(c){if(["DESERCION_ESCOLAR","GESTANTE","CRONICO","DISCAPACIDAD","VAC_PENDIENTE","EDAD_FALTANTE"].indexOf(c)>-1)add(1,(p.n||"Sin nombre")+": "+L[c][0])})});
+S.p.forEach(function(p){var e=edad(p.fn);if(!e)return;var b=banP(p);bPend(p,e).filter(function(c){return c!=="VLE_PENDIENTE"}).forEach(function(c){b.push(c)});
+b.forEach(function(c){if(["DESERCION_ESCOLAR","GESTANTE","CRONICO","DISCAPACIDAD","VAC_PENDIENTE","CRED_PENDIENTE","EDAD_FALTANTE"].indexOf(c)>-1)add(1,(p.n||"Sin nombre")+": "+L[c][0])})});
 banH().forEach(function(c){if(c!=="MONOPARENTAL")add(3,L[c][0])})}
 function drawVP(){$("vcnt").textContent="("+S.vis.length+")";
 $("vlist").innerHTML=S.vis.length?S.vis.map(function(v,i){return '<div class="pc"><b>'+fd(v.f)+'</b> · '+RES[v.res]+' <button data-vd="'+i+'" style="float:right;padding:3px 9px">✕</button><span class="m">'+(v.resp?esc(v.resp)+" · ":"")+"Próxima: "+fd(v.prox)+'</span></div>'}).join(""):'<p class="m">Aún no hay visitas.</p>';
@@ -93,7 +114,7 @@ return kdf(pw,unb64(f.salt)).then(function(k){return crypto.subtle.decrypt({name
 function limpiar(o){if(!o||!Array.isArray(o.p)||typeof o.h!=="object")throw new Error("datos");
 var h=Object.assign({},H0,o.h);h.dorm=Math.max(1,+h.dorm||1);
 var p=o.p.map(function(x){var v={};if(x.vac&&typeof x.vac==="object")Object.keys(x.vac).forEach(function(k){if(/^[a-z0-9]{2,8}$/.test(k)&&/^\d{4}-\d{2}-\d{2}$/.test(x.vac[k]))v[k]=x.vac[k]});
-return{n:String(x.n||"").slice(0,80),fn:/^\d{4}-\d{2}-\d{2}$/.test(x.fn||"")?x.fn:"",ges:!!x.ges,lac:!!x.lac,cro:!!x.cro,dis:!!x.dis,esc:!!x.esc,vac:v}});
+return{n:String(x.n||"").slice(0,80),fn:/^\d{4}-\d{2}-\d{2}$/.test(x.fn||"")?x.fn:"",sx:/^[FM]$/.test(x.sx||"")?x.sx:"",fe:!!x.fe,ges:!!x.ges,lac:!!x.lac,cro:!!x.cro,dis:!!x.dis,esc:!!x.esc,vac:v}});
 return{h:h,p:p,vis:limV(o.vis),pai:limP(o.pai)}}
 function claveOk(){var c=$("clave").value;if(!(window.crypto&&crypto.subtle)){msg("Este navegador o esta dirección no permite cifrar. Usa https.");return null}if(c.length<8){msg("La clave debe tener al menos 8 caracteres.");return null}return c}
 function exportar(){var c=claveOk();if(!c)return;msg("Cifrando…",true);
@@ -104,8 +125,10 @@ r.readAsText(file)}
 
 document.addEventListener("click",function(ev){var t=ev.target;
 if(t.dataset.p){S.perfil=t.dataset.p}else if(t.dataset.d){S.p.splice(+t.dataset.d,1)}
-else if(t.id==="add"){S.p.push({n:$("nom").value.trim(),fn:$("fn").value,ges:$("ges").checked,lac:$("lac").checked,cro:$("cro").checked,dis:$("dis").checked,esc:$("esc").checked,vac:{}});["nom","fn"].forEach(function(k){$(k).value=""});["ges","lac","cro","dis","esc"].forEach(function(k){$(k).checked=false})}
-else if(t.id==="demo"){S.h={agua:"pozo",san:"pozo_ciego",comb:"lenia_sin_chimenea",dorm:1,tratada:false,vect:true,mono:false};S.p=[{n:"Abuela Rosa",fn:rel(68*12),cro:true,vac:{}},{n:"Madre Ana",fn:rel(30*12),ges:true,vac:{}},{n:"Luis",fn:rel(14*12),esc:true,vac:{}},{n:"Camila",fn:rel(38),vac:{}},{n:"Bebé Mateo",fn:rel(5),vac:{}}]}
+else if(t.id==="add"){var tx=$("fn").value.trim(),f=parseF(tx),fe=false;if(tx&&!f){$("fmsg").textContent="La fecha no es válida. Escribe dd/mm/aaaa.";return}
+if(!f&&($("ea").value||$("em").value)){f=estF($("ea").value,$("em").value);fe=true}$("fmsg").textContent="";
+S.p.push({n:$("nom").value.trim(),sx:$("sx").value,fn:f,fe:fe,ges:!$("wges").hidden&&$("ges").checked,lac:!$("wlac").hidden&&$("lac").checked,cro:$("cro").checked,dis:$("dis").checked,esc:!$("wesc").hidden&&$("esc").checked,vac:{}});["nom","fn","ea","em"].forEach(function(k){$(k).value=""});$("sx").value="";["ges","lac","cro","dis","esc"].forEach(function(k){$(k).checked=false});mostrar()}
+else if(t.id==="demo"){S.h={agua:"pozo",san:"pozo_ciego",comb:"lenia_sin_chimenea",dorm:1,tratada:false,vect:true,mono:false};S.p=[{n:"Abuela Rosa",sx:"F",fn:rel(68*12),cro:true,vac:{}},{n:"Madre Ana",sx:"F",fn:rel(30*12),ges:true,vac:{}},{n:"Luis",sx:"M",fn:rel(14*12),esc:true,vac:{}},{n:"Camila",sx:"F",fn:rel(38),vac:{}},{n:"Bebé Mateo",sx:"M",fn:rel(5),vac:{}}]}
 else if(t.id==="clr"){S.p=[];S.vis=[];S.pai=[];S.h=Object.assign({},H0)}
 else if(t.id==="vadd"){S.vis.push({f:$("vf").value||hoy(),res:$("vr").value,resp:$("vp").value.trim().slice(0,80),prox:$("vx").value});["vf","vp","vx"].forEach(function(k){$(k).value=""})}
 else if(t.dataset.vd){S.vis.splice(+t.dataset.vd,1)}
@@ -120,4 +143,5 @@ document.addEventListener("change",function(ev){var t=ev.target;
 if(t.dataset&&t.dataset.v){var p=S.p[+t.dataset.i];if(!p)return;p.vac=p.vac||{};if(t.checked)p.vac[t.dataset.v]=new Date().toISOString().slice(0,10);else delete p.vac[t.dataset.v];save();draw()}
 else if(t.id==="arch"&&t.files[0]){importar(t.files[0]);t.value=""}});
 ["agua","san","comb","dorm","tratada","vect","mono"].forEach(function(k){$(k).addEventListener("change",function(){var el=$(k);S.h[k]=el.type==="checkbox"?el.checked:k==="dorm"?Math.max(1,+el.value||1):el.value;save();draw()})});
-draw();
+$("fn").addEventListener("input",function(){this.value=fmtF(this.value);mostrar()});["sx","ea","em"].forEach(function(k){$(k).addEventListener("input",mostrar)});
+draw();mostrar();
