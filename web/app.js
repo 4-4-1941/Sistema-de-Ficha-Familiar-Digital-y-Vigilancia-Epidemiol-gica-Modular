@@ -84,6 +84,7 @@ var PQ=[
 ["md2",["MEDICINA"],"Tamizaje de cáncer de piel (examen clínico)","Manual HIS Cáncer 2025: de 18 a 70 años, cada año",function(p,e){return e.a>=18&&e.a<=70},365],
 ["md3",["MEDICINA","OBSTETRICIA"],"Cáncer de mama: examen clínico de mamas","GPC INS-CETS de tamizaje de cáncer de mama: mujeres de 40 a 69 años con bajo riesgo, cada 2 años, por un profesional de salud",function(p,e){return p.sx==="F"&&e.a>=40&&e.a<=69},730],
 ["md4",["MEDICINA","OBSTETRICIA"],"Cáncer de mama: mamografía","GPC INS-CETS de tamizaje de cáncer de mama: mujeres de 40 a 69 años con bajo riesgo, cada 2 años (de 40 a 49 tras decisión compartida)",function(p,e){return p.sx==="F"&&e.a>=40&&e.a<=69},730],
+["cu1",["MEDICINA","OBSTETRICIA"],"Cáncer de cuello uterino: tamizaje","Directiva Sanitaria 165-MINSA/DGIESP-2025 (RM 480-2025/MINSA): mujeres de 25 a 64 años. DM-VPH de 30 a 49 años (se repite cada 5 años); IVAA o citología de 25 a 29 y de 50 a 64 años (cada 3 años); gestante solo con citología. Elige el método usado antes de marcar. Mujer con VIH: control más frecuente (DM-VPH cada 3 años; IVAA o citología cada año). No se tamiza si no inició relaciones sexuales, tiene histerectomía total no asociada a cáncer, está en tratamiento por cáncer o lesión premaligna, o tiene lesión visible en el cuello (se refiere)",function(p,e){return p.sx==="F"&&e.a>=25&&e.a<=64},function(p){return p.cum==="DM-VPH"?1825:1095}],
 ["md5",["MEDICINA"],"Tamizaje lipídico (perfil lipídico completo)","GPC INS-CETS de dislipidemia 2025: de 40 a 75 años considerar tamizaje y repetirlo cada 3 a 5 años. De 18 a 39 años solo con factores de riesgo",function(p,e){return e.a>=40&&e.a<=75},1825],
 ["psi2",["MEDICINA"],"Tamizaje de depresión (PHQ-9 de 18 a 59 años; GDS-15 desde los 60)","GPC RM 136-2023-MINSA, págs. 25 a 28: puntaje de corte 5 (posible depresión); todo positivo recibe consejería. Código HIS 96150.03",function(p,e){return e.a>=18},0],
 ["psi2",["OBSTETRICIA"],"Tamizaje de depresión (PHQ-9 de 18 a 59 años; GDS-15 desde los 60)","GPC RM 136-2023-MINSA, págs. 25 a 28: puntaje de corte 5 (posible depresión); todo positivo recibe consejería. Código HIS 96150.03",function(p,e){return p.sx==="F"&&e.a>=18},0],
@@ -93,10 +94,11 @@ var PQ=[
 ["og2",["ODONTOLOGIA"],"Gestante: 2ª cita odontológica","PP0002 en el manual de Salud Bucal 2025: mínimo 3 citas durante la gestación",function(p){return !!p.ges},300],
 ["og3",["ODONTOLOGIA"],"Gestante: 3ª cita odontológica","PP0002 en el manual de Salud Bucal 2025: mínimo 3 citas durante la gestación",function(p){return !!p.ges},300]];
 var PQT={MEDICINA:"Tamizajes",OBSTETRICIA:"Tamizajes",ODONTOLOGIA:"Salud bucal"},PQI={MEDICINA:"🔎",OBSTETRICIA:"🤰",ODONTOLOGIA:"🦷"},PQB={MEDICINA:"MED_PENDIENTE",OBSTETRICIA:"OBS_PENDIENTE",ODONTOLOGIA:"ODO_PENDIENTE"};
-function hechaV(p,id,vig){var v=p.vac&&p.vac[id];if(!v)return false;if(vig==="A")return v.slice(0,4)===String(new Date().getFullYear());return(new Date()-new Date(v+"T00:00:00"))/864e5<=vig}
+function hechaV(p,id,vig){var v=p.vac&&p.vac[id];if(!v)return false;if(typeof vig==="function")vig=vig(p);if(vig==="A")return v.slice(0,4)===String(new Date().getFullYear());return(new Date()-new Date(v+"T00:00:00"))/864e5<=vig}
 function pqs(p,e,f){return PQ.filter(function(q){return q[1].indexOf(f)>-1&&q[4](p,e)}).map(function(q){return{id:q[0],n:q[2],f:q[3],ok:hechaV(p,q[0],q[5])}})}
+function selCu(i,p){return '<select data-cum="1" data-i="'+i+'"><option value="">Método usado…</option>'+["DM-VPH","IVAA","Citología"].map(function(m){return '<option'+(p.cum===m?" selected":"")+'>'+m+'</option>'}).join("")+'</select>'}
 function panelPq(i,p,e,f){var r=pqs(p,e,f),n=r.filter(function(x){return !x.ok}).length;if(!r.length)return '<div class="prog">Sin atenciones de '+PQT[f].toLowerCase()+' para este miembro según los manuales HIS 2025.</div>';
-return '<details'+(n?" open":"")+'><summary>'+PQI[f]+' '+PQT[f]+' · '+n+' pendiente'+(n===1?"":"s")+'</summary>'+r.map(function(x){return '<label class="dv '+(x.ok?"ok":"pend")+'"><input type="checkbox" data-v="'+x.id+'" data-i="'+i+'"'+(x.ok?" checked":"")+'><span><b>'+x.n+'</b><span class="m">'+(x.ok?"✓ "+p.vac[x.id]:x.f)+'</span></span></label>'}).join("")+((f!=="ODONTOLOGIA"&&!p.sx&&e.a>=40&&e.a<=69)?'<p class="m">Indica el sexo para evaluar el tamizaje de mama.</p>':"")+'<p class="m">Al marcar se guarda solo la fecha, y se renueva según la frecuencia del manual.</p></details>'}
+return '<details'+(n?" open":"")+'><summary>'+PQI[f]+' '+PQT[f]+' · '+n+' pendiente'+(n===1?"":"s")+'</summary>'+r.map(function(x){return '<label class="dv '+(x.ok?"ok":"pend")+'"><input type="checkbox" data-v="'+x.id+'" data-i="'+i+'"'+(x.ok?" checked":"")+'><span><b>'+x.n+'</b><span class="m">'+(x.ok?"✓ "+p.vac[x.id]+(x.id==="cu1"&&p.cum?" · "+p.cum:""):x.f)+'</span>'+(x.id==="cu1"?selCu(i,p):"")+'</span></label>'}).join("")+((f!=="ODONTOLOGIA"&&!p.sx&&e.a>=25&&e.a<=69)?'<p class="m">Indica el sexo para evaluar el tamizaje de mama y cuello uterino.</p>':"")+'<p class="m">Al marcar se guarda solo la fecha, y se renueva según la frecuencia del manual.</p></details>'}
 function draw(){var h=S.h;$("agua").value=h.agua;$("san").value=h.san;$("comb").value=h.comb;$("dorm").value=h.dorm;$("tratada").checked=h.tratada;$("vect").checked=h.vect;$("mono").checked=h.mono;
 $("fh").innerHTML=chips(banH());
 $("perfiles").innerHTML=PERF.map(function(x){return '<button data-p="'+x[0]+'" class="'+(S.perfil===x[0]?"on":"")+'">'+x[1]+'</button>'}).join("");
@@ -136,7 +138,7 @@ return kdf(pw,unb64(f.salt)).then(function(k){return crypto.subtle.decrypt({name
 function limpiar(o){if(!o||!Array.isArray(o.p)||typeof o.h!=="object")throw new Error("datos");
 var h=Object.assign({},H0,o.h);h.dorm=Math.max(1,+h.dorm||1);
 var p=o.p.map(function(x){var v={};if(x.vac&&typeof x.vac==="object")Object.keys(x.vac).forEach(function(k){if(/^[a-z0-9]{2,8}$/.test(k)&&/^\d{4}-\d{2}-\d{2}$/.test(x.vac[k]))v[k]=x.vac[k]});
-return{n:String(x.n||"").slice(0,80),fn:/^\d{4}-\d{2}-\d{2}$/.test(x.fn||"")?x.fn:"",sx:/^[FM]$/.test(x.sx||"")?x.sx:"",fe:!!x.fe,ges:!!x.ges,lac:!!x.lac,cro:!!x.cro,dis:!!x.dis,esc:!!x.esc,vac:v}});
+return{n:String(x.n||"").slice(0,80),fn:/^\d{4}-\d{2}-\d{2}$/.test(x.fn||"")?x.fn:"",sx:/^[FM]$/.test(x.sx||"")?x.sx:"",fe:!!x.fe,ges:!!x.ges,lac:!!x.lac,cro:!!x.cro,dis:!!x.dis,esc:!!x.esc,vac:v,cum:["DM-VPH","IVAA","Citología"].indexOf(x.cum)>-1?x.cum:undefined}});
 return{h:h,p:p,vis:limV(o.vis),pai:limP(o.pai)}}
 function claveOk(){var c=$("clave").value;if(!(window.crypto&&crypto.subtle)){msg("Este navegador o esta dirección no permite cifrar. Usa https.");return null}if(c.length<8){msg("La clave debe tener al menos 8 caracteres.");return null}return c}
 function bajar(b,n){var a=document.createElement("a"),u=URL.createObjectURL(b);a.href=u;a.download=n;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},4000)}
@@ -179,7 +181,7 @@ dosis(p,e).filter(function(x){return x.s!=="prox"}).forEach(function(x){add("Enf
 var c=cred(p,e);if(c&&c.cur)add("Enfermería","Control CRED: "+c.cur[1],"Del "+fd(diaF(p,c.cur[2]))+" al "+fd(diaF(p,c.cur[3])),hechoP(p,c.cur[0]),V[c.cur[0]]);
 var v=vle(p,e);if(v)add("Nutrición","Vaso de Leche: inscrito en el padrón",v,hechoP(p,"vle1"),V.vle1);
 psi(p,e).forEach(function(x){add("Psicología",x[1],x[2],hechoP(p,x[0]),V[x[0]])});
-[["MEDICINA","Medicina"],["OBSTETRICIA","Obstetricia"],["ODONTOLOGIA","Odontología"]].forEach(function(f){pqs(p,e,f[0]).forEach(function(x){add(f[1],x.n,x.f,x.ok,V[x.id])})})});
+[["MEDICINA","Medicina"],["OBSTETRICIA","Obstetricia"],["ODONTOLOGIA","Odontología"]].forEach(function(f){pqs(p,e,f[0]).forEach(function(x){add(f[1],x.n,x.f+(x.id==="cu1"&&p.cum?" · Método usado: "+p.cum:""),x.ok,V[x.id])})})});
 return[{n:"Léeme",r:[["Ficha Familiar Digital · exportación"],["Fecha de exportación",fd(hoy())],["Importante","Este archivo NO está cifrado y contiene datos personales. Guárdalo en un lugar seguro y compártelo solo con consentimiento (Ley 29733)."],["Nota","Las banderas son alertas de priorización, no diagnóstico."]]},
 {n:"Miembros",r:m},{n:"Atenciones",r:a},
 {n:"Hogar",r:[["Campo","Valor"],["Fuente de agua",sel("agua",h.agua)],["Trata el agua",SN(h.tratada)],["Servicio higiénico",sel("san",h.san)],["Combustible para cocinar",sel("comb",h.comb)],["Habitaciones para dormir",+h.dorm||1],["Criaderos o vectores",SN(h.vect)],["Familia monoparental",SN(h.mono)],["Miembros",S.p.length],["Banderas del hogar",banH().map(eti).join("; ")]]},
@@ -211,7 +213,8 @@ else if(t.id==="exp"){exportar();return}
 else if(t.id==="imp"){$("arch").click();return}else return;
 save();draw()});
 document.addEventListener("change",function(ev){var t=ev.target;
-if(t.dataset&&t.dataset.v){var p=S.p[+t.dataset.i];if(!p)return;p.vac=p.vac||{};if(t.checked)p.vac[t.dataset.v]=new Date().toISOString().slice(0,10);else delete p.vac[t.dataset.v];save();draw()}
+if(t.dataset&&t.dataset.cum){var q=S.p[+t.dataset.i];if(!q)return;if(t.value)q.cum=t.value;else delete q.cum;save();draw()}
+else if(t.dataset&&t.dataset.v){var p=S.p[+t.dataset.i];if(!p)return;p.vac=p.vac||{};if(t.dataset.v==="cu1"&&t.checked&&!p.cum){msg("Primero elige el método usado: DM-VPH, IVAA o Citología.");draw();return}if(t.checked)p.vac[t.dataset.v]=new Date().toISOString().slice(0,10);else delete p.vac[t.dataset.v];save();draw()}
 else if(t.id==="arch"&&t.files[0]){importar(t.files[0]);t.value=""}});
 ["agua","san","comb","dorm","tratada","vect","mono"].forEach(function(k){$(k).addEventListener("change",function(){var el=$(k);S.h[k]=el.type==="checkbox"?el.checked:k==="dorm"?Math.max(1,+el.value||1):el.value;save();draw()})});
 $("fn").addEventListener("input",function(){this.value=fmtF(this.value);mostrar()});["sx","ea","em"].forEach(function(k){$(k).addEventListener("input",mostrar)});
