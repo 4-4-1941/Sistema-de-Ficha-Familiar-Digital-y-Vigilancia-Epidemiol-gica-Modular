@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ficha Familiar Digital · prototipo</title>
-<link rel="stylesheet" href="estilos.css?v=20261019-xls">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="estilos.css?v=20261020-geo">
 </head>
 <body>
 <main>
@@ -25,6 +26,13 @@
 <label class="ck"><input type="checkbox" id="vect"> Hay criaderos o vectores (dengue)</label>
 <label class="ck"><input type="checkbox" id="mono"> Familia monoparental</label>
 <div class="chips" id="fh"></div></div>
+
+<div class="card"><h2>1b · Ubicación referencial de la vivienda</h2>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="p" id="gps">📍 Usar mi ubicación</button><button id="geoq">Quitar ubicación</button></div>
+<div id="mapa" style="height:260px;margin-top:8px;border-radius:10px;background:var(--bg)"></div>
+<p class="m" id="gtxt"></p>
+<label>Referencia de la vivienda (calle, color de la casa, cerca de…)</label><input id="gref" maxlength="120" placeholder="Ej.: frente a la bodega, puerta azul" autocomplete="off">
+<p class="warn">Ubicación referencial, no es una dirección oficial. Se guarda solo en este dispositivo y dentro del archivo cifrado (.ffd); NO se incluye en el Excel. El mapa se descarga de OpenStreetMap: solo recibe la zona que estás viendo, no los datos de la familia. Sin internet las coordenadas se guardan igual.</p></div>
 
 <div class="card"><h2>2 · Agregar miembro</h2>
 <div class="row">
@@ -63,6 +71,7 @@
 <p class="msg" id="msg"></p>
 <p class="warn">El archivo cifrado (.ffd) se ve como códigos porque está protegido: solo se abre en esta ficha con tu clave. Si la olvidas, no se puede recuperar. «Exportar a Excel» NO va cifrado y contiene datos personales: guárdalo en un lugar seguro y compártelo solo con consentimiento. Los datos guardados en este dispositivo tampoco están cifrados: usa “Borrar todo” al terminar si el equipo es compartido.</p></div>
 </main>
-<script src="app.js?v=20261019-xls"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="app.js?v=20261020-geo"></script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 // Ficha Familiar Digital - banderas, vacunas y guardado cifrado
 // Los datos se guardan solo en este dispositivo (localStorage). Nada se envia a servidores.
+var LF=window.L; // Leaflet (el nombre L lo usa más abajo la tabla de etapas de vida)
 var KEY="ffd-proto-1",PERF=[["ENFERMERIA","Enfermería"],["NUTRICION","Nutrición"],["PSICOLOGIA","Psicología"],["MEDICINA","Medicina"],["OBSTETRICIA","Obstetricia"],["ODONTOLOGIA","Odontología"]];
 var H0={agua:"",san:"",comb:"",dorm:1,tratada:false,vect:false,mono:false};
 var S={h:Object.assign({},H0),p:[],perfil:"ENFERMERIA"};
@@ -101,7 +102,7 @@ function pqs(p,e,f){return PQ.filter(function(q){return q[1].indexOf(f)>-1&&q[4]
 function selCu(i,p){return '<select data-cum="1" data-i="'+i+'"><option value="">Método usado…</option>'+["DM-VPH","IVAA","Citología"].map(function(m){return '<option'+(p.cum===m?" selected":"")+'>'+m+'</option>'}).join("")+'</select><label class="ck"><input type="checkbox" data-vih="1" data-i="'+i+'"'+(p.vih?" checked":"")+'> Mujer con VIH (control más frecuente)</label>'}
 function panelPq(i,p,e,f){var r=pqs(p,e,f),n=r.filter(function(x){return !x.ok}).length;if(!r.length)return '<div class="prog">Sin atenciones de '+PQT[f].toLowerCase()+' para este miembro según los manuales HIS 2025.</div>';
 return '<details'+(n?" open":"")+'><summary>'+PQI[f]+' '+PQT[f]+' · '+n+' pendiente'+(n===1?"":"s")+'</summary>'+r.map(function(x){return '<label class="dv '+(x.ok?"ok":"pend")+'"><input type="checkbox" data-v="'+x.id+'" data-i="'+i+'"'+(x.ok?" checked":"")+'><span><b>'+x.n+'</b><span class="m">'+(x.ok?"✓ "+p.vac[x.id]+(x.id==="cu1"&&p.cum?" · "+p.cum:""):x.f)+'</span>'+(x.id==="cu1"?selCu(i,p):"")+'</span></label>'}).join("")+((f!=="ODONTOLOGIA"&&!p.sx&&e.a>=25&&e.a<=69)?'<p class="m">Indica el sexo para evaluar el tamizaje de mama y cuello uterino.</p>':"")+'<p class="m">Al marcar se guarda solo la fecha, y se renueva según la frecuencia del manual.</p></details>'}
-function draw(){var h=S.h;$("agua").value=h.agua;$("san").value=h.san;$("comb").value=h.comb;$("dorm").value=h.dorm;$("tratada").checked=h.tratada;$("vect").checked=h.vect;$("mono").checked=h.mono;
+function draw(){var h=S.h;geoDraw();$("agua").value=h.agua;$("san").value=h.san;$("comb").value=h.comb;$("dorm").value=h.dorm;$("tratada").checked=h.tratada;$("vect").checked=h.vect;$("mono").checked=h.mono;
 $("fh").innerHTML=chips(banH());
 $("perfiles").innerHTML=PERF.map(function(x){return '<button data-p="'+x[0]+'" class="'+(S.perfil===x[0]?"on":"")+'">'+x[1]+'</button>'}).join("");
 $("cnt").textContent="("+S.p.length+")";
@@ -138,7 +139,7 @@ return kdf(pw,salt).then(function(k){return crypto.subtle.encrypt({name:"AES-GCM
 function descifrar(pw,txt){var f=JSON.parse(txt);if(f.app!=="ffd")throw new Error("formato");
 return kdf(pw,unb64(f.salt)).then(function(k){return crypto.subtle.decrypt({name:"AES-GCM",iv:unb64(f.iv)},k,unb64(f.data))}).then(function(pt){return JSON.parse(new TextDecoder().decode(pt))})}
 function limpiar(o){if(!o||!Array.isArray(o.p)||typeof o.h!=="object")throw new Error("datos");
-var h=Object.assign({},H0,o.h);h.dorm=Math.max(1,+h.dorm||1);
+var h=Object.assign({},H0,o.h);h.dorm=Math.max(1,+h.dorm||1);h.gref=String(h.gref||"").slice(0,120);var g=h.geo;if(g&&typeof g==="object"&&isFinite(g.lat)&&isFinite(g.lng)&&Math.abs(g.lat)<=90&&Math.abs(g.lng)<=180)h.geo={lat:Math.round(g.lat*1e5)/1e5,lng:Math.round(g.lng*1e5)/1e5};else delete h.geo;
 var p=o.p.map(function(x){var v={};if(x.vac&&typeof x.vac==="object")Object.keys(x.vac).forEach(function(k){if(/^[a-z0-9]{2,8}$/.test(k)&&/^\d{4}-\d{2}-\d{2}$/.test(x.vac[k]))v[k]=x.vac[k]});
 return{n:String(x.n||"").slice(0,80),fn:/^\d{4}-\d{2}-\d{2}$/.test(x.fn||"")?x.fn:"",sx:/^[FM]$/.test(x.sx||"")?x.sx:"",fe:!!x.fe,ges:!!x.ges,lac:!!x.lac,cro:!!x.cro,dis:!!x.dis,esc:!!x.esc,vac:v,vih:x.vih===true?true:undefined,cum:["DM-VPH","IVAA","Citología"].indexOf(x.cum)>-1?x.cum:undefined}});
 return{h:h,p:p,vis:limV(o.vis),pai:limP(o.pai)}}
@@ -221,4 +222,17 @@ else if(t.dataset&&t.dataset.v){var p=S.p[+t.dataset.i];if(!p)return;p.vac=p.vac
 else if(t.id==="arch"&&t.files[0]){importar(t.files[0]);t.value=""}});
 ["agua","san","comb","dorm","tratada","vect","mono"].forEach(function(k){$(k).addEventListener("change",function(){var el=$(k);S.h[k]=el.type==="checkbox"?el.checked:k==="dorm"?Math.max(1,+el.value||1):el.value;save();draw()})});
 $("fn").addEventListener("input",function(){this.value=fmtF(this.value);mostrar()});["sx","ea","em"].forEach(function(k){$(k).addEventListener("input",mostrar)});
+// Ubicación referencial de la vivienda (solo en este dispositivo y en el archivo cifrado; no va al Excel)
+var gm,gk;
+function geoPon(lat,lng){S.h.geo={lat:Math.round(lat*1e5)/1e5,lng:Math.round(lng*1e5)/1e5};save();geoDraw()}
+function geoDraw(){var g=S.h.geo,t=$("gtxt"),r=$("gref");if(!t)return;if(r&&document.activeElement!==r)r.value=S.h.gref||"";
+t.textContent=g?"Ubicación referencial: "+g.lat+", "+g.lng:"Sin ubicación registrada.";
+if(!LF||!LF.map){if(!gm)$("mapa").textContent="El mapa necesita internet para cargarse. Las coordenadas se guardan igual.";return}
+if(!gm){gm=LF.map("mapa").setView([-9.19,-75.01],5);LF.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(gm);gm.on("click",function(ev){geoPon(ev.latlng.lat,ev.latlng.lng)})}
+if(g){if(!gk){gk=LF.marker([g.lat,g.lng],{draggable:true}).addTo(gm);gk.on("dragend",function(){var c=gk.getLatLng();geoPon(c.lat,c.lng)})}else gk.setLatLng([g.lat,g.lng]);gm.setView([g.lat,g.lng],Math.max(gm.getZoom(),17))}
+else if(gk){gm.removeLayer(gk);gk=null}
+setTimeout(function(){gm.invalidateSize()},50)}
+$("gps").addEventListener("click",function(){if(!navigator.geolocation){msg("Este dispositivo no permite obtener la ubicación.");return}msg("Buscando ubicación…",true);navigator.geolocation.getCurrentPosition(function(p){geoPon(p.coords.latitude,p.coords.longitude);msg("Ubicación guardada. Si no queda exacta, toca el mapa o arrastra el marcador.",true)},function(){msg("No se pudo obtener la ubicación. Activa el GPS y el permiso del navegador, o toca el mapa.")},{enableHighAccuracy:true,timeout:15000,maximumAge:0})});
+$("geoq").addEventListener("click",function(){delete S.h.geo;save();geoDraw()});
+$("gref").addEventListener("input",function(){S.h.gref=this.value.slice(0,120);save()});
 draw();mostrar();
